@@ -1,6 +1,7 @@
 // Shared data-model codegen. Both targets use Drizzle + SQLite, so entity -> schema,
 // validators and migration SQL are produced HERE and merely *placed* differently by each
 // adapter. This is the concrete payoff of a target-agnostic IR: real codegen reuse.
+import { createHash } from 'node:crypto'
 import { snake } from '../util.js'
 
 const q = (s) => `'${s}'`
@@ -54,6 +55,21 @@ export function migrationSql(graph) {
   return out
 }
 
+export function migrationManifest(graph, driver = 'sqlite') {
+  const initSql = migrationSql(graph)
+  return JSON.stringify({
+    version: 1,
+    driver,
+    migrations: [
+      {
+        id: '0000_init',
+        file: '0000_init.sql',
+        checksum: checksum(initSql),
+      },
+    ],
+  }, null, 2) + '\n'
+}
+
 function zodFor(f) {
   let z
   switch (f.type) {
@@ -83,4 +99,8 @@ export function entityClientNeeds(graph) {
     ;(byEntity[a.entity] ||= new Set()).add(a.type)
   }
   return byEntity
+}
+
+function checksum(sql) {
+  return createHash('sha256').update(sql).digest('hex')
 }

@@ -28,7 +28,7 @@ function packageJson(id, opts = {}) {
   return JSON.stringify({
     name: `${id}-next`,
     private: true,
-    scripts: { dev: 'next dev', build: 'next build', start: 'next start', typecheck: 'tsc --noEmit' },
+    scripts: { dev: 'next dev', build: 'next build', start: 'next start', migrate: 'tsx lib/db/migrate.ts', typecheck: 'tsc --noEmit' },
     dependencies: {
       '@libsql/client': '^0.14.0',
       'class-variance-authority': '^0.7.0',
@@ -50,13 +50,17 @@ function packageJson(id, opts = {}) {
       postcss: '^8.4.49',
       prettier: '^3.4.2',
       tailwindcss: '^3.4.15',
+      tsx: '^4.19.2',
       typescript: '^5.7.2',
     },
   }, null, 2) + '\n'
 }
 
 function envExample(graph, opts = {}) {
-  const lines = ['DB_URL=file:./data.db']
+  const lines = [
+    'DB_URL=file:./data.db',
+    '# INTENTSTACK_AUTO_MIGRATE=false   # production: run npm run migrate during deploy',
+  ]
   if (opts.useAuth) {
     lines.push(
       '',
@@ -242,7 +246,9 @@ npm install
 npm run dev     # http://localhost:3000
 \`\`\`
 
-The route handler under \`app/api/\` applies \`migrations/0000_init.sql\` to a local SQLite
-file on first request. Submit the form on \`/\`, then open \`/dashboard/leads\`.
+The route handler under \`app/api/\` reads \`migrations/manifest.json\` and applies listed
+SQL migrations to a local SQLite file on first request. For production deploys, set
+\`INTENTSTACK_AUTO_MIGRATE=false\` and run \`npm run migrate\` as a separate deploy step.
+Submit the form on \`/\`, then open \`/dashboard/leads\`.
 `
 }

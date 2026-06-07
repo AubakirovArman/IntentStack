@@ -31,6 +31,7 @@ function packageJson(id, opts = {}) {
       'dev:api': 'tsx watch server/index.ts',
       build: 'vite build',
       start: 'tsx server/index.ts',
+      migrate: 'tsx server/generated/db/migrate.ts',
       typecheck: 'tsc --noEmit',
     },
     dependencies: {
@@ -122,6 +123,7 @@ function envExample(graph, opts = {}) {
   const lines = [
     'PORT=8787',
     'DB_URL=file:./data.db',
+    '# INTENTSTACK_AUTO_MIGRATE=false   # production: run npm run migrate during deploy',
     '# VITE_API_URL=   # leave empty in dev (vite proxies /api)',
   ]
   if (opts.useAuth) {
@@ -156,8 +158,10 @@ npm install
 npm run dev      # web -> http://localhost:5173   api -> http://localhost:8787
 \`\`\`
 
-The Hono server applies \`migrations/0000_init.sql\` to a local SQLite file (\`data.db\`)
-on boot. The landing form POSTs to the API; the dashboard reads it back.
+The Hono server reads \`migrations/manifest.json\` and applies listed SQL migrations to a
+local SQLite file (\`data.db\`) on boot. For production deploys, set
+\`INTENTSTACK_AUTO_MIGRATE=false\` and run \`npm run migrate\` as a separate deploy step.
+The landing form POSTs to the API; the dashboard reads it back.
 
 ## Layout
 

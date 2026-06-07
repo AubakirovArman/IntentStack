@@ -87,7 +87,7 @@ The Core IR and the shared data-model codegen (`emit/shared/datamodel.js`) are r
 
 Implemented: `new`, `check`, `build`, `plan`, `diff`, `apply`, `explain`, `doctor`,
 `migrate`, `list_capabilities`, `schema`, `graph`, `editor`, `openapi`, `testgen`, `deploy`, `themes`, `marketplace`, `stats`, `verify`; two target adapters;
-entities -> Drizzle schema + SQL migration + zod validators; record actions -> Hono routes /
+entities -> Drizzle schema + SQL migration manifest + explicit migration runner + zod validators; record actions -> Hono routes /
 Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, `hero`, `card_grid`, `stats`,
 `pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; derived API clients; inline
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +

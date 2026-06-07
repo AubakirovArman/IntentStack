@@ -5,6 +5,7 @@ export const DB_DRIVERS = {
   sqlite: {
     id: 'sqlite',
     migrationFile: 'migrations/0000_init.sql',
+    manifestFile: 'migrations/manifest.json',
     clientTs: sqliteClientTs,
   },
 }
@@ -16,15 +17,25 @@ export function dbDriver(graph) {
   return driver
 }
 
-function sqliteClientTs({ banner, pathImports, pathPrelude = '', migrationPathExpr, functionName, memoized }) {
+function sqliteClientTs({ banner, pathImports, pathPrelude = '', migrationManifestPathExpr, functionName, memoized }) {
   const runner = memoized
     ? `let migrated: Promise<void> | null = null
+export async function runIntentStackMigrations() {
+  await runMigrations()
+}
+
 export function ${functionName}() {
+  if (process.env.INTENTSTACK_AUTO_MIGRATE === 'false') return Promise.resolve()
   if (!migrated) migrated = runMigrations()
   return migrated
 }
 `
-    : `export async function ${functionName}() {
+    : `export async function runIntentStackMigrations() {
+  await runMigrations()
+}
+
+export async function ${functionName}() {
+  if (process.env.INTENTSTACK_AUTO_MIGRATE === 'false') return
   await runMigrations()
 }
 `
@@ -38,9 +49,20 @@ const url = process.env.DB_URL ?? 'file:./data.db'
 export const client = createClient({ url })
 export const db = drizzle(client)
 ${pathPrelude}
-const MIGRATIONS = [
-  { id: '0000_init', path: ${migrationPathExpr} },
-] as const
+type MigrationManifest = {
+  migrations?: Array<{ id: string; file: string; checksum?: string }>
+}
+
+const MIGRATION_MANIFEST = ${migrationManifestPathExpr}
+
+function migrationEntries() {
+  const manifest = JSON.parse(readFileSync(MIGRATION_MANIFEST, 'utf8')) as MigrationManifest
+  return (manifest.migrations || []).map((migration) => ({
+    id: migration.id,
+    path: join(dirname(MIGRATION_MANIFEST), migration.file),
+    checksum: migration.checksum,
+  }))
+}
 
 async function ensureMigrationTable() {
   await client.execute(\`
@@ -70,9 +92,10 @@ async function markApplied(id: string, hash: string) {
 
 async function runMigrations() {
   await ensureMigrationTable()
-  for (const migration of MIGRATIONS) {
+  for (const migration of migrationEntries()) {
     const sql = readFileSync(migration.path, 'utf8')
     const hash = checksum(sql)
+    if (migration.checksum && migration.checksum !== hash) throw new Error(\`Migration \${migration.id} does not match manifest checksum.\`)
     const existing = await migrationRecord(migration.id)
     if (existing) {
       if (existing.checksum !== hash) throw new Error(\`Migration \${migration.id} was already applied with a different checksum.\`)

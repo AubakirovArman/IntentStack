@@ -1,5 +1,5 @@
 import { pascal } from '../../emit/util.js'
-import { schemaImports, schemaBody, migrationSql, validatorBody, entityClientNeeds } from '../../emit/shared/datamodel.js'
+import { schemaImports, schemaBody, migrationSql, migrationManifest, validatorBody, entityClientNeeds } from '../../emit/shared/datamodel.js'
 import { dbDriver } from '../../emit/shared/db_driver.js'
 import { hasActionAuth, hasPageAuth, integrationsTs, requestAuthTs, workflowsTs } from '../../emit/shared/modules.js'
 import { tenancyConfig } from '../../emit/shared/tenancy.js'
@@ -13,10 +13,22 @@ export function dataLayer(graph) {
     banner: BANNER,
     functionName: 'ensureMigrated',
     memoized: true,
-    pathImports: `import { join } from 'node:path'`,
-    migrationPathExpr: `join(process.cwd(), 'migrations/0000_init.sql')`,
+    pathImports: `import { dirname, join } from 'node:path'`,
+    migrationManifestPathExpr: `join(process.cwd(), 'migrations/manifest.json')`,
   })
+  files['lib/db/migrate.ts'] = BANNER + `import { runIntentStackMigrations } from './client'
+
+runIntentStackMigrations()
+  .then(() => {
+    console.log('[intentstack] migrations applied')
+  })
+  .catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+`
   files[driver.migrationFile] = migrationSql(graph)
+  files[driver.manifestFile] = migrationManifest(graph, driver.id)
   for (const e of graph.entities) {
     files[`lib/validators/${e.id.toLowerCase()}.ts`] = BANNER + validatorBody(e)
   }
