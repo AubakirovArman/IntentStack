@@ -21,6 +21,12 @@ pages:
       - id: hero
         type: hero
         title: Home
+      - id: features
+        type: card_grid
+        title: Features
+        items:
+          - title: One
+            text: First feature
 `)
 
   const { server, port } = await startEditorServer({ projectDir: dir, port: 0 })
@@ -29,6 +35,9 @@ pages:
     const html = await fetch(base).then((res) => res.text())
     assert.match(html, /Apply patch/)
     assert.match(html, /Patch YAML/)
+    assert.match(html, /Drag sections within a page/)
+    assert.match(html, /data-section-move="true"/)
+    assert.match(html, /data-section-id="hero"/)
 
     const state = await fetch(`${base}/api/state`).then((res) => res.json())
     assert.equal(state.ok, true)
@@ -48,8 +57,24 @@ patch:
     assert.equal(applied.ok, true)
     assert.match(readFileSync(intentPath, 'utf8'), /Edited App/)
 
+    const moved = await fetch(`${base}/api/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patch: `version: 0.1
+patch:
+  - op: section.move
+    page: home
+    section: hero
+    after: features
+`,
+      }),
+    }).then((res) => res.json())
+    assert.equal(moved.ok, true)
+
     const next = await fetch(`${base}/api/state`).then((res) => res.json())
     assert.equal(next.graph.project.name, 'Edited App')
+    assert.deepEqual(next.graph.pages[0].sections.map((section) => section.id), ['features', 'hero'])
     assert.equal(next.history.at(-1).patch, 'editor')
   } finally {
     await new Promise((resolve) => server.close(resolve))

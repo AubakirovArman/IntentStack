@@ -11,13 +11,24 @@ function list(items, render) {
   return `<ul>${items.map(render).join('')}</ul>`
 }
 
+function sectionList(page, editorApi) {
+  if (!page.sections?.length) return '<p class="muted">None</p>'
+  const rows = page.sections.map((section) => `<li class="section-row" ${editorApi ? 'draggable="true" data-section-move="true"' : ''} data-page="${esc(page.id)}" data-section-id="${esc(section.id)}">
+    ${editorApi ? '<span class="drag-handle" aria-hidden="true">::</span>' : ''}
+    <span><strong>${esc(section.id)}</strong> <span class="muted">${esc(section.type)}</span></span>
+    <span class="pill">${esc(section.entity || 'ui')}</span>
+  </li>`).join('')
+  const end = editorApi ? `<li class="drop-end" data-section-drop-end="true" data-page="${esc(page.id)}" data-index="${page.sections.length}">Drop here to move to end</li>` : ''
+  return `<ol class="section-list" data-page-sections="${esc(page.id)}">${rows}${end}</ol>`
+}
+
 export function renderGraphHtml(graph, history = [], opts = {}) {
   const editorApi = opts.editorApi === true
   const sectionTargets = graph.pages.flatMap((page) =>
     page.sections.map((section) => `page.${page.id}.section.${section.id}`))
   const pages = list(graph.pages, (page) => `<li>
     <strong>${esc(page.id)}</strong> <span class="pill">${esc(page.path)}</span>
-    ${list(page.sections, (section) => `<li><span>${esc(section.id)}</span> <span class="muted">${esc(section.type)}</span></li>`)}
+    ${sectionList(page, editorApi)}
   </li>`)
   const entities = list(graph.entities, (entity) => `<li>
     <strong>${esc(entity.id)}</strong> <span class="muted">${esc(entity.table)}</span>
@@ -78,6 +89,12 @@ export function renderGraphHtml(graph, history = [], opts = {}) {
       .status { min-height: 22px; font-size: 13px; }
       .status.ok { color: #047857; }
       .status.error { color: #b91c1c; }
+      .section-list { padding-left: 0; list-style: none; }
+      .section-row { display: grid; grid-template-columns: ${editorApi ? '24px ' : ''}1fr auto; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #f8fafc; }
+      .section-row[draggable="true"] { cursor: grab; }
+      .section-row.dragging { opacity: 0.45; }
+      .drag-handle { color: #64748b; font-weight: 700; text-align: center; }
+      .drop-end { border: 1px dashed #94a3b8; border-radius: 6px; padding: 8px; color: #64748b; text-align: center; }
     </style>
   </head>
   <body>
@@ -86,7 +103,7 @@ export function renderGraphHtml(graph, history = [], opts = {}) {
       <div class="muted">${esc(graph.project?.name || 'IntentStack app')}</div>
     </header>
     <main>
-      <section><h2>Pages and Sections</h2>${pages}</section>
+      <section><h2>Pages and Sections</h2>${editorApi ? '<p class="muted">Drag sections within a page to create and apply a semantic section.move patch.</p>' : ''}${pages}</section>
       <section>
         <h2>Patch Builder</h2>
         <div class="form">
@@ -117,7 +134,9 @@ export function renderGraphHtml(graph, history = [], opts = {}) {
       const patchYaml = document.getElementById('patch-yaml')
       const status = document.getElementById('patch-status')
       const suggestions = ${JSON.stringify(suggestions.map((item) => item.yaml))}
+      const editorApi = ${editorApi ? 'true' : 'false'}
       let patchDirty = false
+      let draggedSection = null
       function updatePatch() {
         const path = target.value + '.' + (prop.value || 'title')
         const yaml = 'version: 0.1\\npatch:\\n  - op: text.set\\n    target: ' + path + '\\n    value: ' + JSON.stringify(value.value)
@@ -129,27 +148,74 @@ export function renderGraphHtml(graph, history = [], opts = {}) {
         status.textContent = message
         status.className = 'status ' + (kind || 'muted')
       }
+      async function applyPatchText(text, message) {
+        if (!editorApi) return false
+        setStatus(message || 'Applying patch...', 'muted')
+        const res = await fetch('/api/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patch: text }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || json.ok === false) {
+          setStatus((json.errors || [json.error || 'Patch failed']).join('; '), 'error')
+          return false
+        }
+        setStatus('Patch applied. Refreshing graph...', 'ok')
+        setTimeout(() => location.reload(), 350)
+        return true
+      }
+      function movePatch(page, section, opts) {
+        let yaml = 'version: 0.1\\npatch:\\n  - op: section.move\\n    page: ' + page + '\\n    section: ' + section
+        if (opts.before) yaml += '\\n    before: ' + opts.before
+        if (opts.after) yaml += '\\n    after: ' + opts.after
+        if (opts.index != null) yaml += '\\n    index: ' + opts.index
+        return yaml
+      }
+      function loadPatch(yaml) {
+        output.textContent = yaml
+        if (patchYaml) {
+          patchYaml.value = yaml
+          patchDirty = true
+        }
+      }
       target?.addEventListener('change', updatePatch)
       prop?.addEventListener('input', updatePatch)
       value?.addEventListener('input', updatePatch)
       patchYaml?.addEventListener('input', () => { patchDirty = true })
       document.getElementById('patch-copy')?.addEventListener('click', () => navigator.clipboard?.writeText(patchYaml?.value || output.textContent))
       document.getElementById('patch-refresh')?.addEventListener('click', () => location.reload())
-      document.getElementById('patch-apply')?.addEventListener('click', async () => {
-        setStatus('Applying patch...', 'muted')
-        const res = await fetch('/api/apply', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patch: patchYaml?.value || output.textContent }),
+      document.getElementById('patch-apply')?.addEventListener('click', () => applyPatchText(patchYaml?.value || output.textContent))
+      for (const row of document.querySelectorAll('[data-section-move]')) {
+        row.addEventListener('dragstart', (event) => {
+          draggedSection = { page: row.dataset.page, section: row.dataset.sectionId }
+          row.classList.add('dragging')
+          event.dataTransfer?.setData('text/plain', JSON.stringify(draggedSection))
         })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok || json.ok === false) {
-          setStatus((json.errors || [json.error || 'Patch failed']).join('; '), 'error')
-          return
-        }
-        setStatus('Patch applied. Refreshing graph...', 'ok')
-        setTimeout(() => location.reload(), 350)
-      })
+        row.addEventListener('dragend', () => row.classList.remove('dragging'))
+        row.addEventListener('dragover', (event) => event.preventDefault())
+        row.addEventListener('drop', async (event) => {
+          event.preventDefault()
+          if (!draggedSection || draggedSection.section === row.dataset.sectionId) return
+          if (draggedSection.page !== row.dataset.page) {
+            setStatus('Move sections within the same page for now.', 'error')
+            return
+          }
+          const yaml = movePatch(row.dataset.page, draggedSection.section, { before: row.dataset.sectionId })
+          loadPatch(yaml)
+          await applyPatchText(yaml, 'Moving section...')
+        })
+      }
+      for (const zone of document.querySelectorAll('[data-section-drop-end]')) {
+        zone.addEventListener('dragover', (event) => event.preventDefault())
+        zone.addEventListener('drop', async (event) => {
+          event.preventDefault()
+          if (!draggedSection || draggedSection.page !== zone.dataset.page) return
+          const yaml = movePatch(zone.dataset.page, draggedSection.section, { index: Number(zone.dataset.index || 0) })
+          loadPatch(yaml)
+          await applyPatchText(yaml, 'Moving section...')
+        })
+      }
       for (const button of document.querySelectorAll('[data-suggestion]')) {
         button.addEventListener('click', () => navigator.clipboard?.writeText(suggestions[Number(button.dataset.suggestion)] || ''))
       }
