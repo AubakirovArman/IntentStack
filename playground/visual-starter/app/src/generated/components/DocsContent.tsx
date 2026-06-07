@@ -16,6 +16,12 @@ export function DocsContent() {
             <a className="block py-1 opacity-70 hover:opacity-100" href="#semantic-patches">{"Semantic patches"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#targets">{"Targets"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#diagnostics">{"Diagnostics and safety"}</a>
+            <a className="block py-1 opacity-70 hover:opacity-100" href="#authoring-examples">{"Authoring examples"}</a>
+            <a className="ml-3 block py-1 opacity-70 hover:opacity-100" href="#cards-example">{"Add cards"}</a>
+            <a className="ml-3 block py-1 opacity-70 hover:opacity-100" href="#form-example">{"Add a form"}</a>
+            <a className="ml-3 block py-1 opacity-70 hover:opacity-100" href="#table-example">{"Add a table"}</a>
+            <a className="ml-3 block py-1 opacity-70 hover:opacity-100" href="#pricing-stats-example">{"Add pricing or stats"}</a>
+            <a className="ml-3 block py-1 opacity-70 hover:opacity-100" href="#page-nav-example">{"Add a page and navigation item"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#current-limits">{"Current limits"}</a>
           </nav>
         </aside>
@@ -64,10 +70,69 @@ export function DocsContent() {
             <li>{"Generated zones are disposable; custom code belongs outside generated folders."}</li>
             <li>{"diff, graph, stats, security, and verify commands help audit intent and output."}</li>
           </ul>
+          <h2 id="authoring-examples" className="text-2xl font-semibold tracking-tight pt-4">{"Authoring examples"}</h2>
+          <p className="text-base leading-7 opacity-80">{"These snippets show the normal way to extend an app. Save a patch file, run intentstack apply as a dry run, then run it again with --write after reviewing the semantic diff."}</p>
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+              <th>{"Goal"}</th>
+              <th>{"Patch ops"}</th>
+              <th>{"Generated result"}</th>
+                </tr>
+              </thead>
+              <tbody>
+            <tr>
+              <td>{"Add cards"}</td>
+              <td>{"section.add"}</td>
+              <td>{"React card grid component"}</td>
+            </tr>
+            <tr>
+              <td>{"Add a form"}</td>
+              <td>{"entity.create + action.create + form.add"}</td>
+              <td>{"Form UI plus POST API route"}</td>
+            </tr>
+            <tr>
+              <td>{"Add a table"}</td>
+              <td>{"action.create + table.add"}</td>
+              <td>{"Data table plus GET API client"}</td>
+            </tr>
+            <tr>
+              <td>{"Add plans or metrics"}</td>
+              <td>{"section.add"}</td>
+              <td>{"Pricing or stats section"}</td>
+            </tr>
+            <tr>
+              <td>{"Add a page"}</td>
+              <td>{"page.create + navigation.item.add"}</td>
+              <td>{"New route and nav item"}</td>
+            </tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 id="cards-example" className="text-xl font-semibold pt-3">{"Add cards"}</h3>
+          <div className="text-xs uppercase tracking-wide opacity-60">{"yaml"}</div>
+          <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: section.add\n    page: home\n    after: hero\n    section:\n      id: services\n      type: card_grid\n      title: Services\n      columns: 3\n      items:\n        - title: Interior renders\n          text: Room scenes with materials, lighting, and camera direction.\n        - title: Product shots\n          text: Studio-style visuals for catalogs and landing pages.\n        - title: Animation frames\n          text: Key frames for motion concepts and presentations.\n"}</code></pre>
+          <h3 id="form-example" className="text-xl font-semibold pt-3">{"Add a form"}</h3>
+          <div className="text-xs uppercase tracking-wide opacity-60">{"yaml"}</div>
+          <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: entity.create\n    id: Brief\n    table: briefs\n    fields:\n      - id: name\n        type: string\n        label: Name\n        required: true\n      - id: email\n        type: string\n        label: Email\n        required: true\n      - id: project_type\n        type: enum\n        label: Project type\n        values: [interior, product, animation]\n      - id: notes\n        type: text\n        label: Notes\n  - op: action.create\n    id: create_brief\n    type: create_record\n    entity: Brief\n  - op: form.add\n    page: home\n    id: brief_form\n    title: Request a visualization brief\n    entity: Brief\n    fields: [name, email, project_type, notes]\n    action: create_brief\n"}</code></pre>
+          <h3 id="table-example" className="text-xl font-semibold pt-3">{"Add a table"}</h3>
+          <div className="text-xs uppercase tracking-wide opacity-60">{"yaml"}</div>
+          <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: action.create\n    id: list_briefs\n    type: list_records\n    entity: Brief\n  - op: page.create\n    id: dashboard_briefs\n    path: /dashboard/briefs\n    layout: dashboard\n  - op: table.add\n    page: dashboard_briefs\n    id: briefs_table\n    entity: Brief\n    action: list_briefs\n    columns: [name, email, project_type]\n"}</code></pre>
+          <h3 id="pricing-stats-example" className="text-xl font-semibold pt-3">{"Add pricing or stats"}</h3>
+          <div className="text-xs uppercase tracking-wide opacity-60">{"yaml"}</div>
+          <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: section.add\n    page: home\n    after: process\n    section:\n      id: pricing\n      type: pricing_cards\n      title: Visualization packages\n      items:\n        - title: Concept\n          price: from $300\n          features: [One room, Two angles, Basic material pass]\n        - title: Presentation\n          price: from $900\n          features: [Three scenes, Styled lighting, Revision pass]\n  - op: section.add\n    page: home\n    after: pricing\n    section:\n      id: proof\n      type: stats\n      title: Delivery metrics\n      items:\n        - label: Average first draft\n          value: 3 days\n        - label: Supported formats\n          value: 6+\n"}</code></pre>
+          <h3 id="page-nav-example" className="text-xl font-semibold pt-3">{"Add a page and navigation item"}</h3>
+          <div className="text-xs uppercase tracking-wide opacity-60">{"yaml"}</div>
+          <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: page.create\n    id: case_studies\n    path: /case-studies\n    layout: docs\n    sections:\n      - id: case_studies_content\n        type: content\n        title: Case studies\n        blocks:\n          - id: intro\n            type: paragraph\n            text: Show examples of previous visualization work.\n  - op: navigation.item.add\n    item:\n      label: Case studies\n      href: /case-studies\n"}</code></pre>
+          <div className="rounded-lg border border-info/30 bg-info/10 p-4">
+            <p className="font-semibold">{"Practical rule"}</p>
+            <p className="leading-7 opacity-80">{"Keep each patch focused. One page, one section, or one entity change is easier to review and easier to roll back."}</p>
+          </div>
           <h2 id="current-limits" className="text-2xl font-semibold tracking-tight pt-4">{"Current limits"}</h2>
           <ul className="list-disc space-y-2 pl-6 opacity-80">
             <li>{"There is not yet a visual browser editor; editing is done through intent and patch files."}</li>
-            <li>{"Content blocks are useful, but still basic: no nested rich text, links, callouts, or reusable snippets."}</li>
+            <li>{"Content is intentionally structured, so it is reliable for agents but not yet a full rich text editor."}</li>
             <li>{"Generated dependency versions still need an audit-hardening pass."}</li>
             <li>{"Production auth, durable workflows, deployments, and provider-specific integrations need deeper hardening."}</li>
           </ul>

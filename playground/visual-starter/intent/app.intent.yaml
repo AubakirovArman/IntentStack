@@ -144,6 +144,195 @@ pages:
                 generation.
               - Generated zones are disposable; custom code belongs outside generated folders.
               - diff, graph, stats, security, and verify commands help audit intent and output.
+          - id: authoring_examples
+            type: heading
+            level: 2
+            text: Authoring examples
+          - id: authoring_examples_intro
+            type: paragraph
+            text: >-
+              These snippets show the normal way to extend an app. Save a patch file, run
+              intentstack apply as a dry run, then run it again with --write after reviewing the
+              semantic diff.
+          - id: authoring_matrix
+            type: table
+            columns:
+              - Goal
+              - Patch ops
+              - Generated result
+            rows:
+              - - Add cards
+                - section.add
+                - React card grid component
+              - - Add a form
+                - entity.create + action.create + form.add
+                - Form UI plus POST API route
+              - - Add a table
+                - action.create + table.add
+                - Data table plus GET API client
+              - - Add plans or metrics
+                - section.add
+                - Pricing or stats section
+              - - Add a page
+                - page.create + navigation.item.add
+                - New route and nav item
+          - id: cards_example
+            type: heading
+            level: 3
+            text: Add cards
+          - id: cards_example_code
+            type: code
+            language: yaml
+            code: |
+              version: 0.1
+              patch:
+                - op: section.add
+                  page: home
+                  after: hero
+                  section:
+                    id: services
+                    type: card_grid
+                    title: Services
+                    columns: 3
+                    items:
+                      - title: Interior renders
+                        text: Room scenes with materials, lighting, and camera direction.
+                      - title: Product shots
+                        text: Studio-style visuals for catalogs and landing pages.
+                      - title: Animation frames
+                        text: Key frames for motion concepts and presentations.
+          - id: form_example
+            type: heading
+            level: 3
+            text: Add a form
+          - id: form_example_code
+            type: code
+            language: yaml
+            code: |
+              version: 0.1
+              patch:
+                - op: entity.create
+                  id: Brief
+                  table: briefs
+                  fields:
+                    - id: name
+                      type: string
+                      label: Name
+                      required: true
+                    - id: email
+                      type: string
+                      label: Email
+                      required: true
+                    - id: project_type
+                      type: enum
+                      label: Project type
+                      values: [interior, product, animation]
+                    - id: notes
+                      type: text
+                      label: Notes
+                - op: action.create
+                  id: create_brief
+                  type: create_record
+                  entity: Brief
+                - op: form.add
+                  page: home
+                  id: brief_form
+                  title: Request a visualization brief
+                  entity: Brief
+                  fields: [name, email, project_type, notes]
+                  action: create_brief
+          - id: table_example
+            type: heading
+            level: 3
+            text: Add a table
+          - id: table_example_code
+            type: code
+            language: yaml
+            code: |
+              version: 0.1
+              patch:
+                - op: action.create
+                  id: list_briefs
+                  type: list_records
+                  entity: Brief
+                - op: page.create
+                  id: dashboard_briefs
+                  path: /dashboard/briefs
+                  layout: dashboard
+                - op: table.add
+                  page: dashboard_briefs
+                  id: briefs_table
+                  entity: Brief
+                  action: list_briefs
+                  columns: [name, email, project_type]
+          - id: pricing_stats_example
+            type: heading
+            level: 3
+            text: Add pricing or stats
+          - id: pricing_stats_example_code
+            type: code
+            language: yaml
+            code: |
+              version: 0.1
+              patch:
+                - op: section.add
+                  page: home
+                  after: process
+                  section:
+                    id: pricing
+                    type: pricing_cards
+                    title: Visualization packages
+                    items:
+                      - title: Concept
+                        price: from $300
+                        features: [One room, Two angles, Basic material pass]
+                      - title: Presentation
+                        price: from $900
+                        features: [Three scenes, Styled lighting, Revision pass]
+                - op: section.add
+                  page: home
+                  after: pricing
+                  section:
+                    id: proof
+                    type: stats
+                    title: Delivery metrics
+                    items:
+                      - label: Average first draft
+                        value: 3 days
+                      - label: Supported formats
+                        value: 6+
+          - id: page_nav_example
+            type: heading
+            level: 3
+            text: Add a page and navigation item
+          - id: page_nav_example_code
+            type: code
+            language: yaml
+            code: |
+              version: 0.1
+              patch:
+                - op: page.create
+                  id: case_studies
+                  path: /case-studies
+                  layout: docs
+                  sections:
+                    - id: case_studies_content
+                      type: content
+                      title: Case studies
+                      blocks:
+                        - id: intro
+                          type: paragraph
+                          text: Show examples of previous visualization work.
+                - op: navigation.item.add
+                  item:
+                    label: Case studies
+                    href: /case-studies
+          - id: authoring_note
+            type: callout
+            title: Practical rule
+            text: >-
+              Keep each patch focused. One page, one section, or one entity change is easier to
+              review and easier to roll back.
           - id: current_limits
             type: heading
             level: 2
@@ -155,8 +344,8 @@ pages:
                 There is not yet a visual browser editor; editing is done through intent and patch
                 files.
               - >-
-                Content blocks are useful, but still basic: no nested rich text, links, callouts, or
-                reusable snippets.
+                Content is intentionally structured, so it is reliable for agents but not yet a full
+                rich text editor.
               - Generated dependency versions still need an audit-hardening pass.
               - >-
                 Production auth, durable workflows, deployments, and provider-specific integrations
