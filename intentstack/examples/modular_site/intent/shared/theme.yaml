@@ -1,0 +1,5 @@
+theme:
+  preset: minimal
+  radius: md
+  density: comfortable
+  color: neutral

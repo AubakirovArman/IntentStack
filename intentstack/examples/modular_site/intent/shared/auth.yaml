@@ -1,0 +1,10 @@
+auth:
+  roles:
+    - id: admin
+      label: Admin
+    - id: editor
+      label: Editor
+  users:
+    - id: admin
+      role: admin
+      password: env:INTENTSTACK_ADMIN_PASSWORD

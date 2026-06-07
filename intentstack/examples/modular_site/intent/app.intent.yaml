@@ -6,6 +6,7 @@ project:
   target: web_ts_minimal
 
 includes:
+  - shared/*.yaml
   - backend/entities/*.yaml
   - backend/actions/*.yaml
   - frontend/pages/*.yaml

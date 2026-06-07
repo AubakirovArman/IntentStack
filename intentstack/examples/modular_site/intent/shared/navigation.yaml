@@ -1,0 +1,9 @@
+navigation:
+  logo: Modular Site
+  items:
+    - label: Home
+      href: /
+    - label: Docs
+      href: /docs
+    - label: Leads
+      href: /leads

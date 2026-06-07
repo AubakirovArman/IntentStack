@@ -163,3 +163,28 @@ test('loader assembles backend entity and action modules into generated APIs', a
   assert.match(nextFiles['lib/api/client.ts'], /export async function createLead/)
   assert.match(nextFiles['components/generated/LeadForm.tsx'], /createLead/)
 })
+
+test('loader assembles shared theme navigation and auth modules', async () => {
+  const { ast } = await loadIntentProject(modularSite, {})
+  const metadata = ast.__intentstack
+
+  assert.equal(ast.theme.radius, 'md')
+  assert.equal(ast.navigation.logo, 'Modular Site')
+  assert.deepEqual(ast.navigation.items.map((item) => item.label), ['Home', 'Docs', 'Leads'])
+  assert.ok(ast.auth.roles.some((role) => role.id === 'admin'))
+  assert.match(metadata.owners.theme, /shared[\\/]theme\.yaml$/)
+  assert.match(metadata.owners.navigation, /shared[\\/]navigation\.yaml$/)
+  assert.match(metadata.owners.auth, /shared[\\/]auth\.yaml$/)
+  assert.equal(validate(ast).hasErrors(), false)
+
+  const webFiles = planFiles(buildGraph(ast))
+  assert.match(webFiles['src/generated/components/AppNav.tsx'], /Modular Site/)
+  assert.match(webFiles['src/generated/pages/HomePage.tsx'], /<AppNav \/>/)
+  assert.match(webFiles['src/generated/pages/LeadsPage.tsx'], /<AppNav \/>/)
+
+  const nextAst = JSON.parse(JSON.stringify(ast))
+  nextAst.project.target = 'next_shadcn'
+  const nextFiles = planFiles(buildGraph(nextAst))
+  assert.match(nextFiles['components/generated/AppNav.tsx'], /Modular Site/)
+  assert.match(nextFiles['app/leads/page.tsx'], /<AppNav \/>/)
+})
