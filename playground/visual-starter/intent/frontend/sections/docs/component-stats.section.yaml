@@ -2,6 +2,7 @@ section:
   id: docs_component_stats
   type: stats
   title: Live stats example
+  embed_only: true
   items:
     - label: First draft
       value: 3 days

@@ -583,30 +583,50 @@ function frontend(graph) {
   const files = {}
   files['app/layout.tsx'] = layoutTsx(graph.project?.name || 'IntentStack App')
   if (hasPageAuth(graph)) files['components/generated/ProtectedPage.tsx'] = reactAuthTs(graph, BANNER)
-  const used = new Set()
   const globalNavName = hasGlobalNavigation(graph) ? 'AppNav' : null
   if (globalNavName) {
-    used.add(globalNavName)
     files[`components/generated/${globalNavName}.tsx`] = buildNav(globalNavName, {
       id: 'app_nav',
       logo: graph.navigation.logo || graph.project?.name,
       items: graph.navigation.items || [],
     })
   }
+  const sectionNames = assignSectionNames(graph, globalNavName ? [globalNavName] : [])
   for (const p of graph.pages) {
     const refs = []
     for (const s of p.sections || []) {
-      let cname = pascal(s.id)
-      if (used.has(cname)) cname = pascal(p.id) + cname
-      used.add(cname)
-      const content = renderSection(graph, cname, s, p)
+      const cname = sectionNames.get(sectionKey(p.id, s.id))
+      const content = renderSection(graph, cname, s, p, sectionNames)
       if (!content) continue
       files[`components/generated/${cname}.tsx`] = content
-      refs.push(cname)
+      if (s.embed_only !== true) refs.push(cname)
     }
     files[pageFile(p)] = pageTsx(p, refs, pageUsesGlobalNav(graph, p) ? globalNavName : null)
   }
   return files
+}
+
+function assignSectionNames(graph, reserved = []) {
+  const used = new Set(reserved)
+  const names = new Map()
+  for (const p of graph.pages) {
+    for (const s of p.sections || []) {
+      let name = pascal(s.id)
+      if (used.has(name)) name = pascal(p.id) + name
+      used.add(name)
+      names.set(sectionKey(p.id, s.id), name)
+      if (!names.has(s.id)) names.set(s.id, name)
+    }
+  }
+  return names
+}
+
+function sectionKey(pageId, sectionId) {
+  return `${pageId}:${sectionId}`
+}
+
+function sectionNameFor(sectionNames, page, sectionId) {
+  return sectionNames.get(sectionKey(page.id, sectionId)) || sectionNames.get(sectionId)
 }
 
 const pageFile = (p) => 'app' + (p.path && p.path !== '/' ? nextRoutePath(p.path) : '') + '/page.tsx'
@@ -677,14 +697,14 @@ function pageUsesGlobalNav(graph, page) {
   return hasGlobalNavigation(graph) && page.navigation !== false
 }
 
-function renderSection(graph, name, s, page) {
+function renderSection(graph, name, s, page, sectionNames) {
   switch (s.type) {
     case 'navbar': return buildNav(name, s)
     case 'hero': return buildHero(name, s, graph.theme)
     case 'card_grid': return buildFeatures(name, s, graph.theme)
     case 'pricing_cards': return buildPricingCards(name, s, graph.theme)
     case 'stats': return buildStats(name, s, graph.theme)
-    case 'content': return buildContent(name, s, graph.theme, page)
+    case 'content': return buildContent(name, s, graph.theme, page, sectionNames)
     case 'custom_component': return buildCustomComponent(name, s, 'components/generated')
     case 'form': return buildForm(name, graph, s, graph.theme)
     case 'table': return buildTable(name, graph, s, page)
@@ -839,12 +859,20 @@ ${cards}
 `
 }
 
-function buildContent(name, s, theme, page) {
+function buildContent(name, s, theme, page, sectionNames) {
   const headings = (s.blocks || [])
-    .filter((block) => block.type === 'heading' && block.text)
-    .map((block) => ({ id: block.id || slug(block.text), text: block.text, level: Number(block.level) || 2 }))
+    .flatMap((block) => {
+      if (block.type === 'heading' && block.text) return [{ id: block.id || slug(block.text), text: block.text, level: Number(block.level) || 2 }]
+      if (block.type === 'example' && block.title) return [{ id: block.id || slug(block.title), text: block.title, level: Number(block.level) || 3 }]
+      return []
+    })
   const showToc = s.toc !== false && headings.length > 1
-  const blocks = (s.blocks || []).map((block) => renderContentBlock(block)).join('\n')
+  const exampleComponents = [...new Set((s.blocks || [])
+    .filter((block) => block.type === 'example' && block.section)
+    .map((block) => sectionNameFor(sectionNames, page, block.section))
+    .filter(Boolean))]
+  const imports = exampleComponents.map((component) => `import { ${component} } from './${component}'`).join('\n')
+  const blocks = (s.blocks || []).map((block) => renderContentBlock(block, page, sectionNames)).join('\n')
   const title = s.title ? `          <h1 className="text-4xl font-bold tracking-tight">${t(s.title)}</h1>\n` : ''
   const toc = showToc ? `        <aside className="hidden lg:block">
           <nav className="sticky top-24 rounded-lg border bg-card p-4 text-sm">
@@ -855,7 +883,7 @@ ${headings.map((h) => `            <a className="${h.level > 2 ? 'ml-3 ' : ''}bl
 ` : ''
   const grid = showToc ? 'grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]' : 'grid'
   const max = page?.layout === 'docs' ? 'max-w-6xl' : 'max-w-4xl'
-  return BANNER + `export function ${name}() {
+  return BANNER + `${imports ? `${imports}\n\n` : ''}export function ${name}() {
   return (
     <section id=${jsStr(s.id)} className="${pad(theme)}">
       <div className="${max} mx-auto px-4 ${grid}">
@@ -869,7 +897,7 @@ ${title}${blocks}
 `
 }
 
-function renderContentBlock(block) {
+function renderContentBlock(block, page, sectionNames) {
   if (block.type === 'heading') {
     const level = Math.min(Math.max(Number(block.level) || 2, 2), 4)
     const id = slug(block.id || block.text || '')
@@ -886,6 +914,26 @@ ${items}
   if (block.type === 'code') {
     const label = block.language ? `          <div className="text-xs uppercase tracking-wide text-muted-foreground">${t(block.language)}</div>\n` : ''
     return `${label}          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>${t(block.code)}</code></pre>`
+  }
+  if (block.type === 'example') {
+    const component = block.section ? sectionNameFor(sectionNames, page, block.section) : null
+    const id = slug(block.id || block.title || block.section || 'example')
+    const title = block.title ? `            <h3 className="text-xl font-semibold">${t(block.title)}</h3>\n` : ''
+    const text = block.text ? `            <p className="text-base leading-7 text-muted-foreground">${t(block.text)}</p>\n` : ''
+    const label = block.language ? `              <div className="text-xs uppercase tracking-wide text-muted-foreground">${t(block.language)}</div>\n` : ''
+    const preview = component
+      ? `              <${component} />`
+      : `              <p className="p-4 text-sm text-muted-foreground">Missing example section: ${t(block.section)}</p>`
+    return `          <div id=${jsStr(id)} className="overflow-hidden rounded-lg border bg-card shadow-sm">
+            <div className="space-y-2 border-b p-4">
+${title}${text}            </div>
+            <div className="bg-muted/30 [&_section]:py-8 [&_section_.max-w-6xl]:max-w-none">
+${preview}
+            </div>
+            <div className="border-t bg-muted p-4">
+${label}              <pre className="overflow-x-auto text-sm"><code>${t(block.code)}</code></pre>
+            </div>
+          </div>`
   }
   if (block.type === 'link') {
     return `          <p><a href=${jsStr(block.href)} className="font-medium text-primary underline-offset-4 hover:underline">${t(block.text)}</a></p>`

@@ -115,8 +115,24 @@ function docsIntent(target) {
               { id: 'tip', type: 'callout', title: 'Tip', text: 'Keep changes small.' },
               { id: 'link', type: 'link', text: 'Open docs', href: '/docs' },
               { id: 'matrix', type: 'table', columns: ['Step', 'Command'], rows: [['Build', 'intentstack build']] },
+              {
+                id: 'cards_example',
+                type: 'example',
+                title: 'Card grid example',
+                text: 'Generated preview and patch code are kept in the same docs block.',
+                section: 'preview_cards',
+                language: 'yaml',
+                code: 'patch:\n  - op: section.add\n    page: docs\n    section:\n      id: preview_cards\n      type: card_grid',
+              },
               { id: 'command', type: 'code', language: 'bash', code: 'intentstack build' },
             ],
+          },
+          {
+            id: 'preview_cards',
+            type: 'card_grid',
+            title: 'Live cards',
+            embed_only: true,
+            items: [{ title: 'One block', text: 'Preview generated inside docs content.' }],
           },
         ],
       },
@@ -135,6 +151,9 @@ test('global navigation and content sections generate for both targets', () => {
   assert.match(webFiles['src/generated/components/DocsContent.tsx'], /intentstack build/)
   assert.match(webFiles['src/generated/components/DocsContent.tsx'], /Open docs/)
   assert.match(webFiles['src/generated/components/DocsContent.tsx'], /<table/)
+  assert.match(webFiles['src/generated/components/DocsContent.tsx'], /import \{ PreviewCards \} from '\.\/PreviewCards'/)
+  assert.match(webFiles['src/generated/components/DocsContent.tsx'], /<PreviewCards \/>/)
+  assert.doesNotMatch(webFiles['src/generated/pages/DocsPage.tsx'], /<PreviewCards \/>/)
   assert.match(webFiles['src/routes.tsx'], /path="\/docs"/)
 
   const nextAst = docsIntent('next_shadcn')
@@ -147,4 +166,7 @@ test('global navigation and content sections generate for both targets', () => {
   assert.match(nextFiles['components/generated/DocsContent.tsx'], /intentstack build/)
   assert.match(nextFiles['components/generated/DocsContent.tsx'], /Open docs/)
   assert.match(nextFiles['components/generated/DocsContent.tsx'], /<table/)
+  assert.match(nextFiles['components/generated/DocsContent.tsx'], /import \{ PreviewCards \} from '\.\/PreviewCards'/)
+  assert.match(nextFiles['components/generated/DocsContent.tsx'], /<PreviewCards \/>/)
+  assert.doesNotMatch(nextFiles['app/docs/page.tsx'], /<PreviewCards \/>/)
 })

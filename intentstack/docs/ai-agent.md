@@ -20,10 +20,12 @@ Rules:
 - Use `list_capabilities` before adding new component or action types.
 - Prefer top-level `navigation` over duplicating `navbar` sections across pages.
 - Use `content` sections for docs-style copy instead of forcing documentation into `card_grid`.
+- Use `example` content blocks when docs need a live generated component and the patch code in the same article block.
 - For modular projects, prefer `apply --write`; it writes changes back to owner module files.
 - Do not flatten a modular app into one root YAML unless explicitly exporting with `--out-intent`.
 - `intentstack new` creates modular projects by default; `--single-file` is only for legacy monoliths.
 - Use `section.module.add` for new sections so the page gets a `ref` and the section gets its own module file.
+- Set `embed_only: true` on sections that are referenced by a docs `example` block and should not render as standalone page bands.
 
 Discovery and verification:
 

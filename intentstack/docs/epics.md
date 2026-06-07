@@ -31,7 +31,7 @@ Status legend:
 ## v0.2 Extensions
 
 17. Global navigation/layout: `done`. Top-level `navigation` is validated, exposed in schema/capabilities, editable through semantic patch ops, and generated as one shared nav component across pages for both targets.
-18. Docs/content component: `done`. `content` sections validate structured heading/paragraph/list/code blocks, generate docs-style content with optional table of contents, and are available in both target registries.
+18. Docs/content component: `done`. `content` sections validate structured heading/paragraph/list/code/example blocks, generate docs-style content with optional table of contents, and are available in both target registries.
 19. Multi-target support for shared nav/content: `done`. `web_ts_minimal` and `next_shadcn` both emit shared `AppNav`, docs routes, and generated content sections from the same intent.
 20. Tests/examples/schema for nav/content: `done`. Unit, patch, validation, CLI/schema, golden, registry, and `docs_content` example coverage are present; `verify --npm-build` passes the example matrix.
 21. Visual starter migration: `done`. `playground/visual-starter` now uses shared navigation and a `content` docs page; web and Next generated apps pass typecheck/build.
@@ -46,3 +46,4 @@ Status legend:
 30. Module graph UI: `done`. `graph --json` and `graph --html` expose module source files and ownership.
 31. Modular-first default: `done`. `intentstack new` creates modular projects by default, `--single-file` is reserved for legacy monoliths, and `playground/visual-starter` now uses root includes plus shared/frontend modules.
 32. Section module patch op: `done`. `section.module.add` creates a focused section module and inserts a page `ref`, keeping modular pages from accumulating inline sections.
+33. Embedded docs examples: `done`. `example` content blocks can render a live generated section and patch code inside the same docs article block; `embed_only` keeps referenced sections out of standalone page rendering.

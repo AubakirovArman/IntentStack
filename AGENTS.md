@@ -49,7 +49,7 @@ module. Codes: `E1xxx` parse, `E2xxx` schema, `E3xxx` semantic refs, `E4xxx` tar
 Target `web_ts_minimal` supports:
 
 - components: `navbar`, `hero`, `card_grid`, `stats`, `pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`
-- content blocks: `heading`, `paragraph`, `list`, `code`, `link`, `callout`, `table`
+- content blocks: `heading`, `paragraph`, `list`, `code`, `link`, `callout`, `table`, `example`
 - actions: `create_record`, `list_records`, `get_record`, `update_record`, `delete_record`
 - field types: `string`, `text`, `number`, `boolean`, `enum`, `datetime`
 - shared layout: top-level `navigation`; set `page.navigation: false` to opt out
@@ -67,6 +67,8 @@ root YAML without being explicitly asked.
 
 For new page sections in modular projects, prefer `section.module.add` over `section.add`. It
 creates the section owner file and keeps the page module as an ordered list of `ref`s.
+When a section should only appear inside a docs `example` block, keep its page `ref` but set
+`embed_only: true` on the section module.
 
 ## Patches
 

@@ -2,6 +2,7 @@ section:
   id: docs_component_cards
   type: card_grid
   title: Live card_grid example
+  embed_only: true
   columns: 3
   items:
     - title: Card title

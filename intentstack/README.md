@@ -36,7 +36,8 @@ compiler. It is intentionally not a full Rust port yet.
 
 - Top-level `navigation` generates one shared nav component reused across pages.
 - `page.navigation: false` opts a page out of shared navigation.
-- `content` sections generate structured docs/content blocks: headings, paragraphs, lists, code, links, callouts and tables.
+- `content` sections generate structured docs/content blocks: headings, paragraphs, lists, code, links, callouts, tables, and embedded examples.
+- `example` content blocks render a generated section preview and its patch code together; set the referenced section to `embed_only: true` to avoid standalone page rendering.
 - Modular intent is the default project structure. Keep `intent/app.intent.yaml` thin with `includes`; put behavior under `shared/`, `backend/`, and `frontend/`.
 - `apply --write` preserves modular structure by writing changes back to owner files.
 - `section.module.add` creates new section modules and inserts page refs in one patch op.

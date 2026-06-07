@@ -41,8 +41,11 @@ test('schema command exposes the DSL JSON Schema', () => {
   assert.ok(schema.properties.actions.items.properties.type.enum.includes('update_record'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.type.enum.includes('content'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.type.enum.includes('custom_component'))
+  assert.equal(schema.properties.pages.items.properties.sections.items.properties.embed_only.type, 'boolean')
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.type.enum.includes('callout'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.type.enum.includes('table'))
+  assert.ok(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.type.enum.includes('example'))
+  assert.equal(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.section.type, 'string')
 })
 
 test('new creates a checkable project and migrate handles v0.1 no-op', () => {

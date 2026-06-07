@@ -94,8 +94,15 @@ test('validates top-level navigation and content blocks', () => {
               { id: 'tip', type: 'callout', title: 'Tip', text: 'Use small patches.' },
               { id: 'link', type: 'link', text: 'Docs', href: '/docs' },
               { id: 'matrix', type: 'table', columns: ['Step', 'Command'], rows: [['Check', 'intentstack check']] },
+              { id: 'example', type: 'example', title: 'Cards', section: 'preview_cards', language: 'yaml', code: 'patch: []' },
               { id: 'command', type: 'code', language: 'bash', code: 'intentstack check' },
             ],
+          },
+          {
+            id: 'preview_cards',
+            type: 'card_grid',
+            embed_only: true,
+            items: [{ title: 'Preview', text: 'Embedded inside docs.' }],
           },
         ],
       },
@@ -127,7 +134,17 @@ test('rejects malformed navigation and content blocks', () => {
               { id: 'bad_link', type: 'link', text: 'Missing href' },
               { id: 'bad_callout', type: 'callout' },
               { id: 'bad_table', type: 'table', columns: [], rows: [] },
+              { id: 'bad_example_missing_section', type: 'example', code: 'patch: []' },
+              { id: 'bad_example_missing_code', type: 'example', section: 'preview_cards' },
+              { id: 'bad_example_unknown_ref', type: 'example', section: 'missing_cards', code: 'patch: []' },
+              { id: 'bad_example_self_ref', type: 'example', section: 'docs_content', code: 'patch: []' },
             ],
+          },
+          {
+            id: 'preview_cards',
+            type: 'card_grid',
+            embed_only: true,
+            items: [{ title: 'Preview', text: 'Embedded inside docs.' }],
           },
         ],
       },
@@ -142,4 +159,8 @@ test('rejects malformed navigation and content blocks', () => {
   assert.ok(d.errors.some((e) => e.code === 'E2242'))
   assert.ok(d.errors.some((e) => e.code === 'E2243'))
   assert.ok(d.errors.some((e) => e.code === 'E2244'))
+  assert.ok(d.errors.some((e) => e.code === 'E2245'))
+  assert.ok(d.errors.some((e) => e.code === 'E2246'))
+  assert.ok(d.errors.some((e) => e.code === 'E2247'))
+  assert.ok(d.errors.some((e) => e.code === 'E2248'))
 })

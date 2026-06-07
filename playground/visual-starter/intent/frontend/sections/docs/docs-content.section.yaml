@@ -180,6 +180,164 @@ section:
       text: >-
         Read each example as a pattern: inspect the generated component, then copy the patch below
         it and adapt the ids, text, fields, or records for your app.
+    - id: cards_example
+      type: example
+      title: Card grid
+      text: >-
+        A card_grid section is useful for feature cards, service lists, galleries, and compact
+        repeated content. The preview is generated from the section module; the patch below shows
+        how to create the same kind of module.
+      section: docs_component_cards
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: section.module.add
+            page: docs
+            after: docs_content
+            section:
+              id: docs_component_cards
+              type: card_grid
+              title: Live card_grid example
+              embed_only: true
+              columns: 3
+              items:
+                - title: Card title
+                  text: A card_grid section renders repeated cards from structured items.
+                - title: Agent-friendly
+                  text: Each card is data, so an agent can add, remove, or update cards safely.
+                - title: Target-owned UI
+                  text: The intent declares the content; the target adapter owns the React markup.
+    - id: form_example
+      type: example
+      title: Form
+      text: >-
+        A form usually needs an entity and a create_record action. The compiler then generates the
+        UI, request handler, validation schema, database insert, and API client.
+      section: docs_component_form
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: entity.create
+            id: DemoRequest
+            table: demo_requests
+            fields:
+              - id: name
+                type: string
+                required: true
+              - id: email
+                type: string
+                required: true
+              - id: project_type
+                type: enum
+                values: [interior, product, animation]
+                required: true
+              - id: budget
+                type: number
+              - id: message
+                type: text
+          - op: action.create
+            id: create_demo_request
+            type: create_record
+            entity: DemoRequest
+          - op: section.module.add
+            page: docs
+            after: docs_component_cards
+            section:
+              id: docs_component_form
+              type: form
+              title: Live form example
+              embed_only: true
+              entity: DemoRequest
+              fields: [name, email, project_type, budget, message]
+              submit:
+                action: create_demo_request
+                success_message: Demo request saved.
+    - id: table_example
+      type: example
+      title: Table
+      text: >-
+        A table connects to a list_records action. The generated app owns loading, empty, and error
+        states while the intent declares the entity, source action, and visible columns.
+      section: docs_component_table
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: action.create
+            id: list_demo_requests
+            type: list_records
+            entity: DemoRequest
+          - op: section.module.add
+            page: docs
+            after: docs_component_form
+            section:
+              id: docs_component_table
+              type: table
+              embed_only: true
+              entity: DemoRequest
+              source:
+                action: list_demo_requests
+              columns: [name, email, project_type, budget]
+    - id: pricing_example
+      type: example
+      title: Pricing cards
+      text: >-
+        pricing_cards is a structured marketing section. Plans, prices, and features stay editable
+        as data while each target controls presentation.
+      section: docs_component_pricing
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: section.module.add
+            page: docs
+            after: docs_component_table
+            section:
+              id: docs_component_pricing
+              type: pricing_cards
+              title: Live pricing_cards example
+              embed_only: true
+              items:
+                - title: Starter
+                  price: from $300
+                  features: [One room or product, Two camera angles, Basic material pass]
+                - title: Studio
+                  price: from $900
+                  features: [Three scenes, Styled lighting, Revision pass]
+                - title: Launch
+                  price: custom
+                  features: [Landing page visuals, Batch export, Motion-ready frames]
+    - id: stats_example
+      type: example
+      title: Stats
+      text: >-
+        stats works well for product metrics, delivery promises, usage numbers, and operational
+        summaries. Keep each stat as data so future patches can update one value safely.
+      section: docs_component_stats
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: section.module.add
+            page: docs
+            after: docs_component_pricing
+            section:
+              id: docs_component_stats
+              type: stats
+              title: Live stats example
+              embed_only: true
+              items:
+                - label: First draft
+                  value: 3 days
+                  text: Typical initial delivery window.
+                - label: Formats
+                  value: 6+
+                  text: Common web and presentation exports.
+                - label: Modules
+                  value: 100%
+                  text: This page is assembled from section modules.
     - id: current_limits
       type: heading
       level: 2

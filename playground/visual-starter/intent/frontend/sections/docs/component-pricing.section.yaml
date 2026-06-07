@@ -2,6 +2,7 @@ section:
   id: docs_component_pricing
   type: pricing_cards
   title: Live pricing_cards example
+  embed_only: true
   items:
     - title: Starter
       price: from $300

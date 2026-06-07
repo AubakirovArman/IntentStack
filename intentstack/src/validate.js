@@ -21,7 +21,7 @@ const ROOT_KEYS = new Set([
 ])
 const WORKFLOW_STEP_TYPES = ['email', 'webhook', 'background_job', 'state_transition', 'approval']
 const INTEGRATION_TYPES = ['webhook', 'email', 'crm', 'telegram', 'whatsapp', 'payment', 'external_api']
-const CONTENT_BLOCK_TYPES = ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table']
+const CONTENT_BLOCK_TYPES = ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table', 'example']
 const SECRET_KEY = /(secret|token|password|api[_-]?key|private[_-]?key)/i
 
 export function validate(ast, opts = {}) {
@@ -156,7 +156,7 @@ export function validate(ast, opts = {}) {
           suggestion: 'Remove the local navbar section or set page.navigation: false.',
         })
       }
-      if (s.type === 'content') validateContent(d, sp, s)
+      if (s.type === 'content') validateContent(d, sp, s, p)
       if (s.type === 'record_detail') {
         validateRecordDetail(d, sp, s, ctx)
         if (s.entity && p.path) detailRoutes.push({ entity: s.entity, path: p.path })
@@ -223,13 +223,15 @@ function asArray(d, value, path) {
   return []
 }
 
-function validateContent(d, sp, s) {
+function validateContent(d, sp, s, page) {
   const blocks = asArray(d, s.blocks, `${sp}.blocks`)
   if (blocks.length === 0) {
     d.warn('W3100', `Content section "${s.id}" has no blocks.`, { path: `${sp}.blocks` })
     return
   }
   const ids = new Set()
+  const pageSections = page?.sections || []
+  const pageSectionIds = new Set(pageSections.map((section) => section?.id).filter(Boolean))
   for (const [i, block] of blocks.entries()) {
     const bp = `${sp}.blocks[${i}]`
     if (!isPlainObject(block)) {
@@ -276,6 +278,26 @@ function validateContent(d, sp, s) {
       const rows = asArray(d, block.rows, `${bp}.rows`)
       if (columns.length === 0) d.error('E2243', 'table block columns are required.', { path: `${bp}.columns` })
       if (rows.length === 0) d.error('E2244', 'table block rows are required.', { path: `${bp}.rows` })
+    }
+    if (block.type === 'example') {
+      if (!block.section) d.error('E2245', 'example block section is required.', { path: `${bp}.section` })
+      if (!block.code) d.error('E2246', 'example block code is required.', { path: `${bp}.code` })
+      if (block.section === s.id) {
+        d.error('E2247', 'example block cannot embed its own content section.', { path: `${bp}.section` })
+      } else if (block.section && !pageSectionIds.has(block.section)) {
+        d.error('E2248', `Example block references unknown section "${block.section}" on this page.`, {
+          path: `${bp}.section`,
+          suggestion: 'Add the referenced section to this page, usually with embed_only: true.',
+        })
+      } else if (block.section) {
+        const ref = pageSections.find((section) => section?.id === block.section)
+        if (ref && ref.embed_only !== true) {
+          d.warn('W3101', `Example block embeds section "${block.section}" that will also render as a standalone page section.`, {
+            path: `${bp}.section`,
+            suggestion: 'Set embed_only: true on the referenced section.',
+          })
+        }
+      }
     }
   }
 }

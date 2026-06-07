@@ -1,6 +1,7 @@
 section:
   id: docs_component_table
   type: table
+  embed_only: true
   entity: DemoRequest
   source:
     action: list_demo_requests

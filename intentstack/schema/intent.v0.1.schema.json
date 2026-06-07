@@ -388,6 +388,9 @@
                     "custom_component"
                   ]
                 },
+                "embed_only": {
+                  "type": "boolean"
+                },
                 "blocks": {
                   "type": "array",
                   "items": {
@@ -408,7 +411,8 @@
                           "code",
                           "link",
                           "callout",
-                          "table"
+                          "table",
+                          "example"
                         ]
                       },
                       "level": {
@@ -421,6 +425,9 @@
                         "type": "string"
                       },
                       "href": {
+                        "type": "string"
+                      },
+                      "section": {
                         "type": "string"
                       },
                       "variant": {

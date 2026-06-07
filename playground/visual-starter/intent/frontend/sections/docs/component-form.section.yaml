@@ -2,6 +2,7 @@ section:
   id: docs_component_form
   type: form
   title: Live form example
+  embed_only: true
   entity: DemoRequest
   fields:
     - name

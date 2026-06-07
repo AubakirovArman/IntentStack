@@ -34,6 +34,7 @@ page:
   layout: docs
   sections:
     - ref: docs_content
+    - ref: docs_cards_example
 ```
 
 ```yaml
@@ -43,8 +44,35 @@ section:
   title: Docs
   blocks:
     - id: intro
-      type: paragraph
-      text: This section lives in its own file.
+          type: paragraph
+          text: This section lives in its own file.
+    - id: cards_example
+      type: example
+      title: Card grid
+      section: docs_cards_example
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: section.module.add
+            page: docs
+            section:
+              id: docs_cards_example
+              type: card_grid
+              embed_only: true
+              items:
+                - title: One card
+                  text: Live preview and patch code stay together.
+```
+
+```yaml
+section:
+  id: docs_cards_example
+  type: card_grid
+  embed_only: true
+  items:
+    - title: One card
+      text: Live preview and patch code stay together.
 ```
 
 Backend modules use the same pattern:
@@ -100,6 +128,11 @@ patch:
 
 By default the new section file is written to
 `frontend/sections/<page>/<section>.section.yaml`. Pass `file:` to choose another module path.
+
+Docs examples can embed a generated section inside a `content` article. Keep the referenced
+section in the page's `sections` list so the compiler generates it, and set `embed_only: true` so
+the page does not render that section as a separate band. The `example` block then points to the
+section id and stores the patch code beside the preview.
 
 ## Diagnostics
 

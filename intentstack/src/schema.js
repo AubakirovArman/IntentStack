@@ -148,6 +148,7 @@ export function intentSchema() {
                 properties: {
                   id: { type: 'string', minLength: 1 },
                   type: { enum: COMPONENT_TYPES },
+                  embed_only: { type: 'boolean' },
                   blocks: {
                     type: 'array',
                     items: contentBlockSchema(),
@@ -223,11 +224,12 @@ function contentBlockSchema() {
     required: ['type'],
     properties: {
       id: { type: 'string' },
-      type: { enum: ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table'] },
+      type: { enum: ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table', 'example'] },
       level: { type: 'number' },
       text: { type: 'string' },
       title: { type: 'string' },
       href: { type: 'string' },
+      section: { type: 'string' },
       variant: { type: 'string' },
       language: { type: 'string' },
       code: { type: 'string' },
