@@ -32,13 +32,15 @@ node src/index.js verify --examples examples --targets web_ts_minimal,next_shadc
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
 node src/index.js docs --out docs-site
 cargo run -p intent_cli -- core inspect ../demo/intent/app.intent.yaml --json
+cargo run -p intent_cli -- core plan ../demo/intent/app.intent.yaml --json
 ```
 
 The Rust workspace includes `crates/intent_core`, which parses YAML/JSON intent into a typed
 Core IR with diagnostics, a symbol table, resolved references, inferred action/section types,
-bindings, and pass summaries. `crates/intent_cli` still forwards normal app generation commands
-to the Node reference emitter, while `intentstack core check|inspect|version` exercises the Rust
-core directly. Full Rust emitter parity is intentionally still future work.
+bindings, pass summaries, and a Rust-native generated file plan for both shipped targets.
+`crates/intent_cli` still forwards normal app generation commands to the Node reference emitter,
+while `intentstack core check|inspect|plan|version` exercises the Rust core directly. Full Rust
+file-content emitter parity is intentionally still future work.
 
 ## Targets
 

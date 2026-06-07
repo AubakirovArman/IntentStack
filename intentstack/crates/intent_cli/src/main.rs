@@ -36,7 +36,7 @@ fn has_flag(args: &[OsString], flag: &str) -> bool {
 
 fn run_core(args: &[OsString]) -> i32 {
     let Some(command) = args.first().and_then(|arg| arg.to_str()) else {
-        eprintln!("usage: intentstack core <version|check|inspect> [intent-file] [--json]");
+        eprintln!("usage: intentstack core <version|check|inspect|plan> [intent-file] [--json]");
         return 2;
     };
     match command {
@@ -56,7 +56,7 @@ fn run_core(args: &[OsString]) -> i32 {
                 0
             }
         }
-        "check" | "inspect" => {
+        "check" | "inspect" | "plan" => {
             let Some(path) = args
                 .iter()
                 .skip(1)
@@ -67,6 +67,27 @@ fn run_core(args: &[OsString]) -> i32 {
             };
             let json = has_flag(args, "--json");
             match intent_core::compile_file(path) {
+                Ok(compiled) if command == "plan" => {
+                    let plan = intent_core::plan_generated_files(&compiled.graph);
+                    if json {
+                        print_json(&serde_json::json!({
+                            "ok": true,
+                            "diagnostics": compiled.diagnostics,
+                            "summary": compiled.graph.summary(),
+                            "emit_plan": plan,
+                        }))
+                    } else {
+                        println!(
+                            "IntentStack Rust emit plan: target={} files={}",
+                            plan.target,
+                            plan.files.len()
+                        );
+                        for file in plan.files {
+                            println!("{}  {}  {}", file.kind, file.managed_zone, file.path);
+                        }
+                        0
+                    }
+                }
                 Ok(compiled) if command == "check" => {
                     if json {
                         print_json(&serde_json::json!({
@@ -129,7 +150,9 @@ fn run_core(args: &[OsString]) -> i32 {
         }
         _ => {
             eprintln!("unknown Rust core command {command}");
-            eprintln!("usage: intentstack core <version|check|inspect> [intent-file] [--json]");
+            eprintln!(
+                "usage: intentstack core <version|check|inspect|plan> [intent-file] [--json]"
+            );
             2
         }
     }

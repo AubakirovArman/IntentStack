@@ -839,6 +839,12 @@ impl PassReport {
 pub struct AppGraph {
     pub version: String,
     pub project: Project,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub navigation: Option<Navigation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tenancy: Option<Value>,
     pub entities: Vec<Entity>,
     pub actions: Vec<Action>,
     pub pages: Vec<Page>,
@@ -1000,6 +1006,322 @@ impl AppGraph {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmitPlan {
+    pub target: String,
+    pub files: Vec<PlannedFile>,
+    pub passes: Vec<PassReport>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PlannedFile {
+    pub path: String,
+    pub kind: String,
+    pub managed_zone: String,
+}
+
+pub fn plan_generated_files(graph: &AppGraph) -> EmitPlan {
+    let mut planner = EmitPlanner::new(&graph.project.target);
+    match graph.project.target.as_str() {
+        "web_ts_minimal" => plan_web_ts_minimal(graph, &mut planner),
+        "next_shadcn" => plan_next_shadcn(graph, &mut planner),
+        _ => {}
+    }
+    let files = planner.into_files();
+    EmitPlan {
+        target: graph.project.target.clone(),
+        passes: vec![PassReport::ok("emit_plan", files.len())],
+        files,
+    }
+}
+
+struct EmitPlanner {
+    target: String,
+    files: BTreeMap<String, PlannedFile>,
+}
+
+impl EmitPlanner {
+    fn new(target: &str) -> Self {
+        Self {
+            target: target.to_string(),
+            files: BTreeMap::new(),
+        }
+    }
+
+    fn add(&mut self, path: impl Into<String>, kind: &str) {
+        let path = path.into();
+        self.files.insert(
+            path.clone(),
+            PlannedFile {
+                managed_zone: managed_zone(&self.target, &path),
+                path,
+                kind: kind.to_string(),
+            },
+        );
+    }
+
+    fn into_files(self) -> Vec<PlannedFile> {
+        self.files.into_values().collect()
+    }
+}
+
+fn plan_web_ts_minimal(graph: &AppGraph, planner: &mut EmitPlanner) {
+    for path in [
+        "package.json",
+        "tsconfig.json",
+        "vite.config.ts",
+        "tailwind.config.js",
+        "postcss.config.js",
+        ".gitignore",
+        ".env.example",
+        "README.md",
+        "index.html",
+        "src/main.tsx",
+        "src/routes.tsx",
+        "src/generated/ErrorBoundary.tsx",
+        "src/generated/api/client.ts",
+        "server/index.ts",
+        "server/generated/otel.ts",
+        "server/generated/db/schema.ts",
+        "server/generated/db/client.ts",
+        "server/generated/db/migrate.ts",
+        "migrations/0000_init.sql",
+        "migrations/manifest.json",
+    ] {
+        planner.add(path, file_kind(path));
+    }
+    if has_auth(graph) {
+        planner.add("server/generated/auth.ts", "auth");
+        planner.add("src/generated/auth.ts", "auth");
+    }
+    if !graph.workflows.is_empty() {
+        planner.add("server/generated/workflows.ts", "workflow");
+    }
+    if !graph.integrations.is_empty() {
+        planner.add("server/generated/integrations.ts", "integration");
+    }
+    for entity in &graph.entities {
+        let lower = entity.id.to_lowercase();
+        planner.add(
+            format!("server/generated/validators/{lower}.ts"),
+            "validator",
+        );
+    }
+    for (entity_id, _types) in entity_action_types(graph) {
+        let entity = graph.entities.iter().find(|entity| entity.id == entity_id);
+        if let Some(entity) = entity {
+            planner.add(
+                format!("server/generated/routes/{}.ts", entity.id.to_lowercase()),
+                "api_route",
+            );
+        }
+    }
+    if has_global_navigation(graph) {
+        planner.add("src/generated/components/AppNav.tsx", "component");
+    }
+    for page in &graph.pages {
+        planner.add(
+            format!("src/generated/pages/{}Page.tsx", pascal(&page.id)),
+            "page",
+        );
+        for section in &page.sections {
+            planner.add(
+                format!("src/generated/components/{}.tsx", pascal(&section.id)),
+                "component",
+            );
+        }
+    }
+}
+
+fn plan_next_shadcn(graph: &AppGraph, planner: &mut EmitPlanner) {
+    for path in [
+        "package.json",
+        "tsconfig.json",
+        "next.config.mjs",
+        "next-env.d.ts",
+        "postcss.config.mjs",
+        "tailwind.config.ts",
+        "app/globals.css",
+        "app/error.tsx",
+        "app/layout.tsx",
+        "middleware.ts",
+        "components.json",
+        ".gitignore",
+        ".env.example",
+        "README.md",
+        "lib/utils.ts",
+        "lib/otel.ts",
+        "lib/api/client.ts",
+        "lib/db/schema.ts",
+        "lib/db/client.ts",
+        "lib/db/migrate.ts",
+        "app/api/health/route.ts",
+        "app/api/metrics/route.ts",
+        "migrations/0000_init.sql",
+        "migrations/manifest.json",
+        "components/ui/button.tsx",
+        "components/ui/input.tsx",
+        "components/ui/textarea.tsx",
+        "components/ui/card.tsx",
+        "components/ui/table.tsx",
+    ] {
+        planner.add(path, file_kind(path));
+    }
+    if has_auth(graph) {
+        planner.add("lib/auth.ts", "auth");
+        planner.add("components/generated/ProtectedPage.tsx", "auth");
+    }
+    if !graph.workflows.is_empty() {
+        planner.add("lib/workflows.ts", "workflow");
+    }
+    if !graph.integrations.is_empty() {
+        planner.add("lib/integrations.ts", "integration");
+    }
+    for entity in &graph.entities {
+        planner.add(
+            format!("lib/validators/{}.ts", entity.id.to_lowercase()),
+            "validator",
+        );
+    }
+    for (entity_id, types) in entity_action_types(graph) {
+        let Some(entity) = graph.entities.iter().find(|entity| entity.id == entity_id) else {
+            continue;
+        };
+        let base = entity.table.as_deref().unwrap_or(&entity.id).to_lowercase();
+        if types.contains("create_record") || types.contains("list_records") {
+            planner.add(format!("app/api/{base}/route.ts"), "api_route");
+        }
+        if types.contains("get_record")
+            || types.contains("update_record")
+            || types.contains("delete_record")
+        {
+            planner.add(format!("app/api/{base}/[id]/route.ts"), "api_route");
+        }
+        if types.contains("subscribe_records") {
+            planner.add(format!("app/api/{base}/stream/route.ts"), "api_route");
+        }
+    }
+    if has_global_navigation(graph) {
+        planner.add("components/generated/AppNav.tsx", "component");
+    }
+    for page in &graph.pages {
+        planner.add(next_page_file(page), "page");
+        for section in &page.sections {
+            planner.add(
+                format!("components/generated/{}.tsx", pascal(&section.id)),
+                "component",
+            );
+        }
+    }
+}
+
+fn entity_action_types(graph: &AppGraph) -> BTreeMap<String, BTreeSet<String>> {
+    let mut out = BTreeMap::new();
+    for action in &graph.actions {
+        if ENTITY_ACTION_TYPES.contains(&action.action_type.as_str()) {
+            if let Some(entity) = &action.entity {
+                out.entry(entity.clone())
+                    .or_insert_with(BTreeSet::new)
+                    .insert(action.action_type.clone());
+            }
+        }
+    }
+    out
+}
+
+fn has_auth(graph: &AppGraph) -> bool {
+    graph.auth.is_some()
+        || graph.pages.iter().any(|page| page.auth.is_some())
+        || graph.actions.iter().any(|action| action.auth.is_some())
+}
+
+fn has_global_navigation(graph: &AppGraph) -> bool {
+    graph
+        .navigation
+        .as_ref()
+        .map(|navigation| navigation.enabled != Some(false))
+        .unwrap_or(false)
+        && graph
+            .pages
+            .iter()
+            .any(|page| page.navigation != Some(false))
+}
+
+fn next_page_file(page: &Page) -> String {
+    if page.path == "/" || page.path.trim().is_empty() {
+        return "app/page.tsx".to_string();
+    }
+    let route = page
+        .path
+        .trim_matches('/')
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            if let Some(param) = part.strip_prefix(':') {
+                format!("[{param}]")
+            } else {
+                part.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("/");
+    format!("app/{route}/page.tsx")
+}
+
+fn managed_zone(target: &str, path: &str) -> String {
+    if target == "next_shadcn" {
+        for zone in ["app", "components", "lib", "migrations"] {
+            if path == zone || path.starts_with(&format!("{zone}/")) {
+                return zone.to_string();
+            }
+        }
+    }
+    for zone in ["src/generated", "server/generated", "migrations"] {
+        if path == zone || path.starts_with(&format!("{zone}/")) {
+            return zone.to_string();
+        }
+    }
+    "project".to_string()
+}
+
+fn file_kind(path: &str) -> &str {
+    if path.contains("/api/") || path.contains("/routes/") {
+        "api_route"
+    } else if path.contains("/db/") || path.starts_with("migrations/") {
+        "database"
+    } else if path.contains("/ui/") {
+        "ui_primitive"
+    } else if path.ends_with("middleware.ts") {
+        "middleware"
+    } else if path.ends_with(".tsx") {
+        "frontend"
+    } else {
+        "project"
+    }
+}
+
+fn pascal(value: &str) -> String {
+    let mut out = String::new();
+    let mut upper = true;
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() {
+            if upper {
+                out.push(ch.to_ascii_uppercase());
+                upper = false;
+            } else {
+                out.push(ch);
+            }
+        } else {
+            upper = true;
+        }
+    }
+    if out.is_empty() {
+        "Generated".to_string()
+    } else {
+        out
+    }
+}
+
 pub fn build_graph(document: &IntentDocument) -> AppGraph {
     let entity_by_id = entity_index(document);
     let action_by_id = action_index(document);
@@ -1009,6 +1331,9 @@ pub fn build_graph(document: &IntentDocument) -> AppGraph {
     AppGraph {
         version: version_string(document).unwrap_or_else(|| "0.1".to_string()),
         project: document.project.clone().unwrap_or_default(),
+        navigation: document.navigation.clone(),
+        auth: document.auth.clone(),
+        tenancy: document.tenancy.clone(),
         entities: document.entities.clone(),
         actions: document.actions.clone(),
         pages: document.pages.clone(),
@@ -1511,6 +1836,40 @@ pages:
                 && binding.from == "Page.home.section.lead_form"
                 && binding.to == "Action.create_lead"));
         assert!(graph.passes.iter().any(|pass| pass.name == "optimize"));
+    }
+
+    #[test]
+    fn plans_generated_files_for_supported_targets() {
+        let web = compile_str(VALID).expect("compile web intent");
+        let web_plan = plan_generated_files(&web.graph);
+        assert!(web_plan
+            .files
+            .iter()
+            .any(|file| file.path == "server/generated/otel.ts" && file.kind == "project"));
+        assert!(web_plan
+            .files
+            .iter()
+            .any(|file| file.path == "server/generated/routes/lead.ts"));
+        assert!(web_plan
+            .files
+            .iter()
+            .any(|file| file.path == "src/generated/components/LeadForm.tsx"));
+
+        let next_source = VALID.replace("target: web_ts_minimal", "target: next_shadcn");
+        let next = compile_str(&next_source).expect("compile next intent");
+        let next_plan = plan_generated_files(&next.graph);
+        assert!(next_plan
+            .files
+            .iter()
+            .any(|file| file.path == "lib/otel.ts"));
+        assert!(next_plan
+            .files
+            .iter()
+            .any(|file| file.path == "app/api/leads/route.ts"));
+        assert!(next_plan
+            .files
+            .iter()
+            .any(|file| file.path == "components/generated/LeadForm.tsx"));
     }
 
     #[test]

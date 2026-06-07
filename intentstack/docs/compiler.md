@@ -26,6 +26,12 @@ Current commands:
 - `migrate`: currently no-op for DSL `0.1`.
 - `list_capabilities`: print targets, components, actions, field types and patch ops.
 
+Rust core commands:
+
+- `cargo run -p intent_cli -- core check <intent-file>`: parse and validate through Rust Core.
+- `cargo run -p intent_cli -- core inspect <intent-file> --json`: emit typed Core IR diagnostics, symbols, resolved references, types and bindings.
+- `cargo run -p intent_cli -- core plan <intent-file> --json`: emit the Rust-native generated file plan for the target.
+
 `build --no-format` skips formatter execution. `build --no-verify` skips generated app verification.
 `build --verify-install` runs `npm install` before generated `npm run build`.
 
