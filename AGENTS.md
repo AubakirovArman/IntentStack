@@ -6,7 +6,8 @@ hand-written framework code. Edit the intent and let the compiler own generated 
 ## Main Rule
 
 Modify application behavior through `intent/app.intent.yaml`, included intent modules, or a
-patch file. If the root intent has `includes`, inspect the relevant owner module under:
+patch file. Modular intent is the baseline. The root intent should stay thin and behavior should
+live in owner modules under:
 
 - `intent/shared/`
 - `intent/backend/`
@@ -24,8 +25,8 @@ These are regenerated on every `intentstack build`. Hand-written code belongs in
 ## Workflow
 
 1. Read `intent/app.intent.yaml`.
-2. If it has `includes`, find the owner module for the requested page, section, entity,
-   action, navigation, theme, or auth change.
+2. Find the owner module for the requested page, section, entity, action, navigation, theme, or
+   auth change.
 3. Make the smallest semantic change that satisfies the request.
 4. Run `intentstack check`.
 5. Run `intentstack build`.
@@ -69,6 +70,8 @@ root YAML without being explicitly asked.
 ```bash
 intentstack apply <patch.yaml> --project .            # dry run
 intentstack apply <patch.yaml> --project . --write    # persist
+intentstack new <dir>                                 # creates modular intent by default
+intentstack new <dir> --single-file                   # legacy monolith only
 intentstack split --project . --write                 # split monolith into modules
 intentstack graph --project . --html graph.html       # inspect graph and module owners
 ```

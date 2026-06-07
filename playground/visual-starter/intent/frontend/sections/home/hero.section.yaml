@@ -1,0 +1,9 @@
+section:
+  id: hero
+  type: hero
+  title: 3D Visual
+  subtitle: A focused one-page web app for presenting 3D visualization services.
+  actions:
+    - label: View process
+      kind: primary
+      target: '#process'

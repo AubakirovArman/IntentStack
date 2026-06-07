@@ -1,0 +1,4 @@
+section:
+  id: docs_footer
+  type: footer
+  text: IntentStack documentation generated from a semantic patch.

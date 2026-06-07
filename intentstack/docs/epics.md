@@ -44,3 +44,4 @@ Status legend:
 28. Split command: `done`. `intentstack split` dry-runs or writes modular files from a monolith intent.
 29. Content authoring improvements: `done`. Content blocks now support links, callouts, and tables; patch ops include `content.blocks.set` and `content.block.move`.
 30. Module graph UI: `done`. `graph --json` and `graph --html` expose module source files and ownership.
+31. Modular-first default: `done`. `intentstack new` creates modular projects by default, `--single-file` is reserved for legacy monoliths, and `playground/visual-starter` now uses root includes plus shared/frontend modules.

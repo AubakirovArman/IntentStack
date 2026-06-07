@@ -1,0 +1,12 @@
+section:
+  id: process
+  type: card_grid
+  title: From brief to render
+  columns: 3
+  items:
+    - title: Brief
+      text: Collect the room, product, mood, dimensions, and reference materials.
+    - title: Model
+      text: Prepare the scene, materials, camera angles, and lighting direction.
+    - title: Deliver
+      text: Export polished visuals for approvals, sales pages, and presentations.

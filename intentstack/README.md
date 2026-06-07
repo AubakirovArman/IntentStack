@@ -2,13 +2,14 @@
 
 Reference implementation of the IntentStack v0.1 compiler.
 
-The compiler reads `intent/app.intent.yaml`, validates semantic intent, builds a target-neutral
-Core IR, and emits a generated fullstack app for a selected target.
+The compiler reads `intent/app.intent.yaml`, assembles included modules, validates semantic intent,
+builds a target-neutral Core IR, and emits a generated fullstack app for a selected target.
 
 ## Commands
 
 ```bash
 node src/index.js new <dir> --target web_ts_minimal
+node src/index.js new <dir> --single-file   # legacy/export-style monolith
 node src/index.js check --project <dir> --json
 node src/index.js build --project <dir>
 node src/index.js diff --project <dir> --verbose
@@ -36,7 +37,7 @@ compiler. It is intentionally not a full Rust port yet.
 - Top-level `navigation` generates one shared nav component reused across pages.
 - `page.navigation: false` opts a page out of shared navigation.
 - `content` sections generate structured docs/content blocks: headings, paragraphs, lists, code, links, callouts and tables.
-- Modular intent projects can keep a thin `intent/app.intent.yaml` with `includes` and focused files under `shared/`, `backend/`, and `frontend/`.
+- Modular intent is the default project structure. Keep `intent/app.intent.yaml` thin with `includes`; put behavior under `shared/`, `backend/`, and `frontend/`.
 - `apply --write` preserves modular structure by writing changes back to owner files.
 - `split --write` migrates a monolith intent into modular files.
 - `graph --html` shows module source files and ownership for modular projects.
@@ -44,6 +45,7 @@ compiler. It is intentionally not a full Rust port yet.
 ## Modular Example
 
 ```bash
+node src/index.js new my-app
 node src/index.js check --project examples/modular_site
 node src/index.js graph --project examples/modular_site --html modular-graph.html
 node src/index.js build --project examples/modular_site --out app-modular

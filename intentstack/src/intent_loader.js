@@ -412,7 +412,14 @@ function escapeRegex(c) {
 }
 
 function singular(collection) {
-  return collection.replace(/s$/, '')
+  return {
+    entities: 'entity',
+    actions: 'action',
+    workflows: 'workflow',
+    integrations: 'integration',
+    pages: 'page',
+    sections: 'section',
+  }[collection] || collection.replace(/s$/, '')
 }
 
 function clone(value) {

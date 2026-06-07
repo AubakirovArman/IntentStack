@@ -3,7 +3,8 @@
 Default loop:
 
 1. Read `intent/app.intent.yaml`.
-   - If it has `includes`, inspect the relevant owner module under `shared/`, `backend/`, or `frontend/` before editing.
+   - Treat `includes` as the normal structure, not a special case.
+   - Inspect the relevant owner module under `shared/`, `backend/`, or `frontend/` before editing.
 2. Make the smallest semantic patch.
 3. Run `intentstack apply <patch> --project <dir>`.
 4. Run `intentstack check --project <dir>`.
@@ -21,6 +22,7 @@ Rules:
 - Use `content` sections for docs-style copy instead of forcing documentation into `card_grid`.
 - For modular projects, prefer `apply --write`; it writes changes back to owner module files.
 - Do not flatten a modular app into one root YAML unless explicitly exporting with `--out-intent`.
+- `intentstack new` creates modular projects by default; `--single-file` is only for legacy monoliths.
 
 Discovery and verification:
 

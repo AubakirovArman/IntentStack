@@ -1,0 +1,7 @@
+page:
+  id: docs
+  path: /docs
+  layout: docs
+  sections:
+    - ref: docs_content
+    - ref: docs_footer

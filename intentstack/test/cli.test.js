@@ -50,6 +50,10 @@ test('new creates a checkable project and migrate handles v0.1 no-op', () => {
   try {
     const created = run(['new', dir, '--name', 'New App'])
     assert.equal(created.status, 0, created.stderr)
+    assert.match(readFileSync(join(dir, 'intent/app.intent.yaml'), 'utf8'), /includes:/)
+    assert.equal(existsSync(join(dir, 'intent/shared/navigation.yaml')), true)
+    assert.equal(existsSync(join(dir, 'intent/backend/entities/lead.entity.yaml')), true)
+    assert.equal(existsSync(join(dir, 'intent/frontend/pages/home.page.yaml')), true)
     const checked = run(['check', '--project', dir])
     assert.equal(checked.status, 0, checked.stderr)
     const migrated = run(['migrate', '--project', dir])
@@ -63,7 +67,7 @@ test('new creates a checkable project and migrate handles v0.1 no-op', () => {
 test('split writes a monolith intent into modular files', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-split-'))
   try {
-    const created = run(['new', dir, '--name', 'Split App'])
+    const created = run(['new', dir, '--name', 'Split App', '--single-file'])
     assert.equal(created.status, 0, created.stderr)
     const dryRun = run(['split', '--project', dir])
     assert.equal(dryRun.status, 0, dryRun.stderr)

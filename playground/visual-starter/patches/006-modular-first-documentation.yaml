@@ -1,0 +1,96 @@
+version: 0.1
+patch:
+  - op: content.block.update
+    section: docs_content
+    block: overview_text
+    value:
+      text: >-
+        IntentStack is an AI-native fullstack compiler. The application is described as modular
+        intent: a small root manifest includes focused files under shared, frontend, and backend
+        folders. The compiler assembles those modules and generates framework code, routes, API
+        handlers, database files, styles, and migrations.
+
+  - op: content.block.update
+    section: docs_content
+    block: workflow_list
+    value:
+      items:
+        - Read the root intent and the relevant owner module before changing behavior.
+        - Express the next change as a semantic patch instead of editing generated code.
+        - Run intentstack apply as a dry run and inspect the semantic diff.
+        - Run intentstack apply --write so the compiler writes back to the owner module.
+        - Run intentstack check, intentstack build, then verify the generated application.
+
+  - op: content.block.add
+    section: docs_content
+    after: core_loop_list
+    block:
+      id: modular_first
+      type: heading
+      level: 2
+      text: Modular structure is the foundation
+
+  - op: content.block.add
+    section: docs_content
+    after: modular_first
+    block:
+      id: modular_first_text
+      type: paragraph
+      text: >-
+        A real app should not grow as one huge YAML file. Keep the root file as a manifest and put
+        behavior into small owner modules. This gives agents a precise edit target and keeps
+        diagnostics actionable.
+
+  - op: content.block.add
+    section: docs_content
+    after: modular_first_text
+    block:
+      id: modular_tree
+      type: code
+      language: text
+      code: |
+        intent/
+          app.intent.yaml                 # version, project, includes
+          shared/
+            navigation.yaml               # global navigation
+            theme.yaml                    # design tokens
+          frontend/
+            pages/
+              home.page.yaml              # route + section refs
+              docs.page.yaml
+            sections/
+              home/hero.section.yaml      # focused UI modules
+              docs/docs-content.section.yaml
+          backend/
+            entities/lead.entity.yaml     # data model modules
+            actions/create-lead.action.yaml
+
+  - op: content.block.add
+    section: docs_content
+    after: modular_tree
+    block:
+      id: modular_patch_writeback
+      type: callout
+      title: Patch writeback
+      text: >-
+        In a modular project, intentstack apply --write preserves the module layout. A docs copy
+        change writes to the docs section file, a navigation change writes to
+        shared/navigation.yaml, and an entity change writes to backend/entities.
+
+  - op: content.block.update
+    section: docs_content
+    block: semantic_patches_text
+    value:
+      text: >-
+        Patches are small machine-readable changes such as navigation.item.add, page.create,
+        section.add, entity.field.add, and content.block.update. The compiler validates the
+        assembled result before writing changes back to the correct owner module.
+
+  - op: content.block.update
+    section: docs_content
+    block: authoring_examples_intro
+    value:
+      text: >-
+        These snippets show the normal way to extend an app. Save a focused patch file, run
+        intentstack apply as a dry run, then run it again with --write so the modular owner files
+        are updated safely.

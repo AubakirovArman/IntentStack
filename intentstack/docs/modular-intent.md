@@ -1,6 +1,8 @@
 # Modular Intent
 
-IntentStack can load one root manifest plus focused module files. The root file stays small and declares `includes`; modules own pages, sections, entities, actions, shared navigation, theme, and auth.
+IntentStack is modular-first. A normal project has one root manifest plus focused module files. The root file stays small and declares `includes`; modules own pages, sections, entities, actions, shared navigation, theme, and auth.
+
+`intentstack new <dir>` creates this structure by default. Use `--single-file` only for a legacy monolith or one-file export workflow.
 
 ## Root Manifest
 
@@ -19,7 +21,7 @@ includes:
   - frontend/sections/**/*.yaml
 ```
 
-The compiler assembles all included files into the same Core IR as a monolith intent. Validation, build, diff, graph, stats, security, and verify work against the assembled graph.
+The compiler assembles all included files into one Core IR. Validation, build, diff, graph, stats, security, and verify work against the assembled graph.
 
 ## Module Shapes
 

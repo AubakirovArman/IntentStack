@@ -1,0 +1,11 @@
+navigation:
+  logo: 3D Visual
+  items:
+    - label: Home
+      href: /
+    - label: Process
+      href: /#process
+    - label: Docs
+      href: /docs
+    - label: Contact
+      href: /#footer

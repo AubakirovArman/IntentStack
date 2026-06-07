@@ -3,14 +3,14 @@
  * Source of truth: intent/app.intent.yaml — re-run `intentstack build` to regenerate.
  */
 import { Routes, Route } from 'react-router-dom'
-import { HomePage } from './generated/pages/HomePage'
 import { DocsPage } from './generated/pages/DocsPage'
+import { HomePage } from './generated/pages/HomePage'
 
 export function AppRoutes() {
   return (
     <Routes>
-        <Route path="/" element={<HomePage />} />
         <Route path="/docs" element={<DocsPage />} />
+        <Route path="/" element={<HomePage />} />
     </Routes>
   )
 }

@@ -13,6 +13,7 @@ export function DocsContent() {
             <a className="block py-1 opacity-70 hover:opacity-100" href="#generated">{"What it can generate"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#workflow">{"Agent workflow"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#core-loop">{"Core compiler loop"}</a>
+            <a className="block py-1 opacity-70 hover:opacity-100" href="#modular-first">{"Modular structure is the foundation"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#semantic-patches">{"Semantic patches"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#targets">{"Targets"}</a>
             <a className="block py-1 opacity-70 hover:opacity-100" href="#diagnostics">{"Diagnostics and safety"}</a>
@@ -28,7 +29,7 @@ export function DocsContent() {
         <article className="space-y-6">
           <h1 className="text-4xl font-bold tracking-tight">{"IntentStack Documentation"}</h1>
           <h2 id="overview" className="text-2xl font-semibold tracking-tight pt-4">{"What IntentStack is"}</h2>
-          <p className="text-base leading-7 opacity-80">{"IntentStack is an AI-native fullstack compiler. The application is described as intent in intent/app.intent.yaml, and the compiler generates framework code, routes, API handlers, database files, styles, and migrations."}</p>
+          <p className="text-base leading-7 opacity-80">{"IntentStack is an AI-native fullstack compiler. The application is described as modular intent: a small root manifest includes focused files under shared, frontend, and backend folders. The compiler assembles those modules and generates framework code, routes, API handlers, database files, styles, and migrations."}</p>
           <h2 id="generated" className="text-2xl font-semibold tracking-tight pt-4">{"What it can generate"}</h2>
           <ul className="list-disc space-y-2 pl-6 opacity-80">
             <li>{"Multi-page React/Vite applications for the web_ts_minimal target."}</li>
@@ -39,11 +40,11 @@ export function DocsContent() {
           </ul>
           <h2 id="workflow" className="text-2xl font-semibold tracking-tight pt-4">{"Agent workflow"}</h2>
           <ul className="list-disc space-y-2 pl-6 opacity-80">
-            <li>{"Read the current intent before changing behavior."}</li>
+            <li>{"Read the root intent and the relevant owner module before changing behavior."}</li>
             <li>{"Express the next change as a semantic patch instead of editing generated code."}</li>
             <li>{"Run intentstack apply as a dry run and inspect the semantic diff."}</li>
-            <li>{"Run intentstack check, then intentstack build."}</li>
-            <li>{"Verify the generated application with typecheck and production build."}</li>
+            <li>{"Run intentstack apply --write so the compiler writes back to the owner module."}</li>
+            <li>{"Run intentstack check, intentstack build, then verify the generated application."}</li>
           </ul>
           <div className="text-xs uppercase tracking-wide opacity-60">{"powershell"}</div>
           <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"node ..\\..\\intentstack\\src\\index.js apply .\\patches\\004-write-tool-documentation.yaml --project .\nnode ..\\..\\intentstack\\src\\index.js check --project .\nnode ..\\..\\intentstack\\src\\index.js build --project .\n"}</code></pre>
@@ -55,8 +56,16 @@ export function DocsContent() {
             <li>{"Plan generated files before writing them."}</li>
             <li>{"Emit target-specific frontend, backend, database, and support files."}</li>
           </ul>
+          <h2 id="modular-first" className="text-2xl font-semibold tracking-tight pt-4">{"Modular structure is the foundation"}</h2>
+          <p className="text-base leading-7 opacity-80">{"A real app should not grow as one huge YAML file. Keep the root file as a manifest and put behavior into small owner modules. This gives agents a precise edit target and keeps diagnostics actionable."}</p>
+          <div className="text-xs uppercase tracking-wide opacity-60">{"text"}</div>
+          <pre className="rounded-lg overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>{"intent/\n  app.intent.yaml                 # version, project, includes\n  shared/\n    navigation.yaml               # global navigation\n    theme.yaml                    # design tokens\n  frontend/\n    pages/\n      home.page.yaml              # route + section refs\n      docs.page.yaml\n    sections/\n      home/hero.section.yaml      # focused UI modules\n      docs/docs-content.section.yaml\n  backend/\n    entities/lead.entity.yaml     # data model modules\n    actions/create-lead.action.yaml\n"}</code></pre>
+          <div className="rounded-lg border border-info/30 bg-info/10 p-4">
+            <p className="font-semibold">{"Patch writeback"}</p>
+            <p className="leading-7 opacity-80">{"In a modular project, intentstack apply --write preserves the module layout. A docs copy change writes to the docs section file, a navigation change writes to shared/navigation.yaml, and an entity change writes to backend/entities."}</p>
+          </div>
           <h2 id="semantic-patches" className="text-2xl font-semibold tracking-tight pt-4">{"Semantic patches"}</h2>
-          <p className="text-base leading-7 opacity-80">{"Patches are small machine-readable changes such as navigation.item.add, page.create, section.add, entity.field.add, and content.block.update. The compiler validates the result before writing it back to intent/app.intent.yaml."}</p>
+          <p className="text-base leading-7 opacity-80">{"Patches are small machine-readable changes such as navigation.item.add, page.create, section.add, entity.field.add, and content.block.update. The compiler validates the assembled result before writing changes back to the correct owner module."}</p>
           <h2 id="targets" className="text-2xl font-semibold tracking-tight pt-4">{"Targets"}</h2>
           <ul className="list-disc space-y-2 pl-6 opacity-80">
             <li>{"web_ts_minimal emits Vite, React, Tailwind/daisyUI, Hono API, Drizzle, and SQLite."}</li>
@@ -71,7 +80,7 @@ export function DocsContent() {
             <li>{"diff, graph, stats, security, and verify commands help audit intent and output."}</li>
           </ul>
           <h2 id="authoring-examples" className="text-2xl font-semibold tracking-tight pt-4">{"Authoring examples"}</h2>
-          <p className="text-base leading-7 opacity-80">{"These snippets show the normal way to extend an app. Save a patch file, run intentstack apply as a dry run, then run it again with --write after reviewing the semantic diff."}</p>
+          <p className="text-base leading-7 opacity-80">{"These snippets show the normal way to extend an app. Save a focused patch file, run intentstack apply as a dry run, then run it again with --write so the modular owner files are updated safely."}</p>
           <div className="overflow-x-auto">
             <table className="table">
               <thead>
