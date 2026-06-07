@@ -11,6 +11,7 @@ const ROOT_KEYS = new Set([
   'project',
   'theme',
   'navigation',
+  'includes',
   'auth',
   'entities',
   'actions',

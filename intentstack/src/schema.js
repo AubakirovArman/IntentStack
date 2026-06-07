@@ -42,6 +42,10 @@ export function intentSchema() {
           },
         },
       },
+      includes: {
+        type: 'array',
+        items: { type: 'string', minLength: 1 },
+      },
       auth: {
         anyOf: [
           { type: 'boolean' },

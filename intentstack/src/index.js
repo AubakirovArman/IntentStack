@@ -6,6 +6,7 @@ import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readd
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { parseIntentFile } from './parse.js'
+import { findIntent, loadIntentProject } from './intent_loader.js'
 import { validate } from './validate.js'
 import { buildGraph } from './graph.js'
 import { emit, getAdapter, planFiles } from './emit/index.js'
@@ -36,29 +37,14 @@ async function readConfig(dir) {
   } catch { return {} }
 }
 
-function findIntent(projectDir, cfgIntent) {
-  const candidates = [cfgIntent, 'intent/app.intent.yaml', 'intent/app.intent.yml', 'intent/app.intent.json', 'app.intent.yaml'].filter(Boolean)
-  for (const c of candidates) {
-    const p = resolve(projectDir, c)
-    if (existsSync(p)) return p
-  }
-  return null
-}
-
 async function loadAst(projectDir, cfg) {
-  const intentArg = flag('intent', null)
-  const intentPath = intentArg ? resolve(intentArg) : findIntent(projectDir, cfg.intent)
-  if (!intentPath || !existsSync(intentPath)) {
-    console.error(`No intent file found in ${projectDir}/intent/. Pass --intent <path>.`)
-    process.exit(2)
-  }
   try {
-    const ast = await parseIntentFile(intentPath)
-    const targetOverride = flag('target', null)
-    if (targetOverride) ast.project = { ...(ast.project || {}), target: targetOverride }
-    return { intentPath, ast }
+    return await loadIntentProject(projectDir, cfg, {
+      intentArg: flag('intent', null),
+      targetOverride: flag('target', null),
+    })
   } catch (e) {
-    console.error(`[E1000] Parse error in ${intentPath}:\n  ${e.message}`)
+    console.error(`[E1000] Intent load error:\n  ${e.message}`)
     process.exit(2)
   }
 }
@@ -357,7 +343,7 @@ async function verifyExamples(examplesDir, targets, opts = {}) {
       continue
     }
     let ast
-    try { ast = await parseIntentFile(intentPath) }
+    try { ast = (await loadIntentProject(projectDir, {}, { intentPath })).ast }
     catch (e) {
       rows.push({ example, target: '(parse)', ok: false, error: e.message })
       continue
