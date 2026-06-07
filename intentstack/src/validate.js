@@ -1,7 +1,7 @@
 // Schema + semantic validation (PRD 17 steps 3 & 6). Produces structured diagnostics
 // BEFORE any code is generated.
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { Diagnostics, closest } from './diagnostics.js'
 import { TARGETS, FIELD_TYPES, ACTION_TYPES } from './registry.js'
 import { policyRoles } from './emit/shared/modules.js'
@@ -23,6 +23,7 @@ const WORKFLOW_STEP_TYPES = ['email', 'webhook', 'background_job', 'state_transi
 const INTEGRATION_TYPES = ['webhook', 'email', 'crm', 'telegram', 'whatsapp', 'payment', 'external_api']
 const CONTENT_BLOCK_TYPES = ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table', 'example']
 const SECRET_KEY = /(secret|token|password|api[_-]?key|private[_-]?key)/i
+const JS_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/
 
 export function validate(ast, opts = {}) {
   const d = new Diagnostics()
@@ -451,25 +452,70 @@ function validateWorkflows(d, workflows, actionIds, integrationIds) {
 }
 
 function validateCustomComponent(d, sp, s, opts) {
-  if (!s.component) d.error('E2300', `Custom component "${s.id}" has no component export name.`, { path: `${sp}.component` })
+  if (!s.component) {
+    d.error('E2300', `Custom component "${s.id}" has no component export name.`, { path: `${sp}.component` })
+  } else if (!JS_IDENTIFIER.test(s.component)) {
+    d.error('E2309', `Custom component "${s.id}" component export name must be a JavaScript identifier.`, { path: `${sp}.component` })
+  }
   validateCustomProps(d, sp, s)
   if (!s.source) {
     d.error('E2301', `Custom component "${s.id}" has no source file.`, { path: `${sp}.source` })
     return
   }
+  const source = validateCustomSourcePath(d, sp, s)
+  if (!source) return
   const outDir = opts.outDir
   if (!outDir) return
-  const abs = join(outDir, s.source)
+  const abs = join(outDir, ...source.split('/'))
   if (!existsSync(abs)) {
     d.error('E2302', `Custom component source "${s.source}" does not exist.`, { path: `${sp}.source` })
     return
   }
   if (s.component) {
     const code = readFileSync(abs, 'utf8')
-    const named = new RegExp(`export\\s+(function|const|class)\\s+${s.component}\\b`).test(code)
-    const listed = new RegExp(`export\\s*\\{[^}]*\\b${s.component}\\b[^}]*\\}`).test(code)
+    validateCustomSourceCode(d, sp, s, code)
+    const name = escapeRegex(s.component)
+    const named = new RegExp(`export\\s+(function|const|class)\\s+${name}\\b`).test(code)
+    const listed = new RegExp(`export\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`).test(code)
     if (!named && !listed) {
       d.error('E2303', `Custom component source "${s.source}" does not export "${s.component}".`, { path: `${sp}.component` })
+    }
+  }
+}
+
+function validateCustomSourcePath(d, sp, s) {
+  if (typeof s.source !== 'string') {
+    d.error('E2310', `Custom component "${s.id}" source must be a relative file path.`, { path: `${sp}.source` })
+    return null
+  }
+  const source = s.source.replace(/\\/g, '/')
+  const parts = source.split('/').filter(Boolean)
+  if (isAbsolute(s.source) || /^[A-Za-z]:\//.test(source) || parts.includes('..')) {
+    d.error('E2310', `Custom component "${s.id}" source must stay inside src/custom/.`, { path: `${sp}.source` })
+    return null
+  }
+  if (!source.startsWith('src/custom/')) {
+    d.error('E2311', `Custom component "${s.id}" source must be under src/custom/.`, { path: `${sp}.source` })
+    return null
+  }
+  if (!/\.(tsx|ts|jsx|js)$/.test(source)) {
+    d.error('E2312', `Custom component "${s.id}" source must be a .tsx, .ts, .jsx, or .js file.`, { path: `${sp}.source` })
+    return null
+  }
+  return source
+}
+
+function validateCustomSourceCode(d, sp, s, code) {
+  const forbidden = [
+    { code: 'E2313', re: /\beval\s*\(/, message: 'must not call eval().' },
+    { code: 'E2313', re: /\bnew\s+Function\b/, message: 'must not construct functions from strings.' },
+    { code: 'E2313', re: /\bimport\s*\(/, message: 'must not use dynamic import().' },
+    { code: 'E2314', re: /\bdangerouslySetInnerHTML\b/, message: 'must not use dangerouslySetInnerHTML.' },
+    { code: 'E2315', re: /from\s+['"](?:node:)?(?:fs|child_process|path|os|crypto|http|https|net|process)['"]/, message: 'must not import Node built-ins.' },
+  ]
+  for (const rule of forbidden) {
+    if (rule.re.test(code)) {
+      d.error(rule.code, `Custom component source "${s.source}" ${rule.message}`, { path: `${sp}.source` })
     }
   }
 }
@@ -520,6 +566,10 @@ function matchesPropType(value, type) {
   if (type === 'array') return Array.isArray(value)
   if (type === 'object') return isPlainObject(value)
   return typeof value === type
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
 }
 
 function entityFieldIds(entities, id) {

@@ -50,6 +50,41 @@ test('custom_component validates source file and named export when outDir is pro
   }
 })
 
+test('custom_component rejects unsafe source paths and component names', () => {
+  const outside = validate(ast('../secrets/RoiCalculator.tsx'))
+  assert.ok(outside.errors.some((e) => e.code === 'E2310'))
+
+  const generated = validate(ast('src/generated/RoiCalculator.tsx'))
+  assert.ok(generated.errors.some((e) => e.code === 'E2311'))
+
+  const badExt = validate(ast('src/custom/components/RoiCalculator.txt'))
+  assert.ok(badExt.errors.some((e) => e.code === 'E2312'))
+
+  const badName = ast()
+  badName.pages[0].sections[0].component = 'Roi-Calculator'
+  const badNameDiagnostics = validate(badName)
+  assert.ok(badNameDiagnostics.errors.some((e) => e.code === 'E2309'))
+})
+
+test('custom_component rejects unsafe code patterns when source is available', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-custom-safety-'))
+  try {
+    mkdirSync(join(dir, 'src/custom/components'), { recursive: true })
+    writeFileSync(join(dir, 'src/custom/components/RoiCalculator.tsx'), `import { readFileSync } from 'node:fs'
+export function RoiCalculator() {
+  eval('1 + 1')
+  return <div dangerouslySetInnerHTML={{ __html: 'unsafe' }} />
+}
+`)
+    const d = validate(ast(), { outDir: dir })
+    assert.ok(d.errors.some((e) => e.code === 'E2313'))
+    assert.ok(d.errors.some((e) => e.code === 'E2314'))
+    assert.ok(d.errors.some((e) => e.code === 'E2315'))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('custom_component emits a generated wrapper that imports custom code', () => {
   const files = planFiles(buildGraph(ast()))
   assert.match(files['src/generated/components/Roi.tsx'], /import \{ RoiCalculator \} from "\.\.\/\.\.\/custom\/components\/RoiCalculator"/)
