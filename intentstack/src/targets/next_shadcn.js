@@ -3,7 +3,7 @@
 import { posix } from 'node:path'
 import { pascal, jsStr, t } from '../emit/util.js'
 import { schemaImports, schemaBody, migrationSql, validatorBody, entityClientNeeds } from '../emit/shared/datamodel.js'
-import { RECORD_ACTIONS } from '../registry.js'
+import { componentClasses, RECORD_ACTIONS } from '../registry.js'
 import { declaredUsers, hasActionAuth, hasPageAuth, integrationsTs, isActivePolicy, reactAuthTs, requestAuthTs, roleLiteral, workflowsTs } from '../emit/shared/modules.js'
 import { createSectionRenderer } from '../emit/shared/sections.js'
 
@@ -834,6 +834,7 @@ ${items}
 }
 
 function buildHero(name, s, theme) {
+  const cls = componentClasses('hero', 'next_shadcn')
   const actions = (s.actions || []).map((a) => {
     const variant = a.kind === 'secondary' ? 'secondary' : a.kind === 'outline' ? 'outline' : 'default'
     const href = a.target || a.href || '#'
@@ -844,11 +845,11 @@ import { cn } from '@/lib/utils'
 
 export function ${name}() {
   return (
-    <section className="${pad(theme)} text-center">
-      <div className="mx-auto max-w-3xl px-4">
-        <h1 className="text-5xl font-bold tracking-tight">${t(s.title)}</h1>
-        <p className="mt-6 text-lg text-muted-foreground">${t(s.subtitle)}</p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+    <section className="${pad(theme)} ${cls.section || 'text-center'}">
+      <div className="${cls.inner || 'mx-auto max-w-3xl px-4'}">
+        <h1 className="${cls.title || 'text-5xl font-bold tracking-tight'}">${t(s.title)}</h1>
+        <p className="${cls.subtitle || 'mt-6 text-lg text-muted-foreground'}">${t(s.subtitle)}</p>
+        <div className="${cls.actions || 'mt-8 flex flex-wrap justify-center gap-3'}">
 ${actions}
         </div>
       </div>
@@ -859,20 +860,21 @@ ${actions}
 }
 
 function buildFeatures(name, s, theme) {
+  const cls = componentClasses('card_grid', 'next_shadcn')
   const cols = Math.min(Math.max(Number(s.columns) || 3, 1), 4)
   const colClass = { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4' }[cols]
   const cards = (s.items || []).map((it) =>
 `          <Card>
             <CardHeader><CardTitle>${t(it.title)}</CardTitle></CardHeader>
-            <CardContent className="text-muted-foreground">${t(it.text)}</CardContent>
+            <CardContent className="${cls.text || 'text-muted-foreground'}">${t(it.text)}</CardContent>
           </Card>`).join('\n')
-  const heading = s.title ? `        <h2 className="mb-10 text-center text-3xl font-semibold">${t(s.title)}</h2>\n` : ''
+  const heading = s.title ? `        <h2 className="${cls.heading || 'mb-10 text-center text-3xl font-semibold'}">${t(s.title)}</h2>\n` : ''
   return BANNER + `import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 export function ${name}() {
   return (
-    <section id=${jsStr(s.id)} className="${pad(theme)} bg-muted/30">
-      <div className="mx-auto max-w-6xl px-4">
+    <section id=${jsStr(s.id)} className="${pad(theme)} ${cls.section || 'bg-muted/30'}">
+      <div className="${cls.container || 'mx-auto max-w-6xl px-4'}">
 ${heading}        <div className="grid grid-cols-1 ${colClass} gap-6">
 ${cards}
         </div>

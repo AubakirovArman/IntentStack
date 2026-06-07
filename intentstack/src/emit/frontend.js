@@ -2,7 +2,7 @@
 // composed by a page module; an API client derived from record actions.
 import { posix } from 'node:path'
 import { BANNER_TS, pascal, jsStr, t } from './util.js'
-import { radiusClass, density } from '../registry.js'
+import { componentClasses, radiusClass, density } from '../registry.js'
 import { hasPageAuth, isActivePolicy, reactAuthTs, roleLiteral } from './shared/modules.js'
 import { createSectionRenderer } from './shared/sections.js'
 
@@ -115,6 +115,7 @@ ${items}
 }
 
 function buildHero(name, s, RAD, DEN) {
+  const cls = componentClasses('hero', 'web_ts_minimal')
   const actions = (s.actions || []).map((a) => {
     const variant = a.kind === 'secondary' ? 'btn-secondary' : a.kind === 'outline' ? 'btn-outline' : 'btn-primary'
     const href = a.target || a.href || '#'
@@ -122,12 +123,12 @@ function buildHero(name, s, RAD, DEN) {
   }).join('\n')
   return BANNER_TS + `export function ${name}() {
   return (
-    <section className="hero ${DEN.section} bg-base-100">
+    <section className="hero ${DEN.section} ${cls.section || 'bg-base-100'}">
       <div className="hero-content text-center">
         <div className="max-w-3xl">
-          <h1 className="text-5xl font-bold tracking-tight">${t(s.title)}</h1>
-          <p className="py-6 text-lg opacity-70">${t(s.subtitle)}</p>
-          <div className="flex gap-3 justify-center flex-wrap">
+          <h1 className="${cls.title || 'text-5xl font-bold tracking-tight'}">${t(s.title)}</h1>
+          <p className="${cls.subtitle || 'py-6 text-lg opacity-70'}">${t(s.subtitle)}</p>
+          <div className="${cls.actions || 'flex gap-3 justify-center flex-wrap'}">
 ${actions}
           </div>
         </div>
@@ -139,20 +140,21 @@ ${actions}
 }
 
 function buildCardGrid(name, s, RAD, DEN) {
+  const cls = componentClasses('card_grid', 'web_ts_minimal')
   const cols = Math.min(Math.max(Number(s.columns) || 3, 1), 4)
   const colClass = { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4' }[cols]
   const cards = (s.items || []).map((it) =>
-`        <div className="card bg-base-100 ${RAD} border border-base-200 shadow-sm">
+`        <div className="${cls.card || 'card bg-base-100 border border-base-200 shadow-sm'} ${RAD}">
           <div className="card-body">
             <h3 className="card-title">${t(it.title)}</h3>
-            <p className="opacity-70">${t(it.text)}</p>
+            <p className="${cls.text || 'opacity-70'}">${t(it.text)}</p>
           </div>
         </div>`).join('\n')
-  const heading = s.title ? `        <h2 className="text-3xl font-semibold text-center mb-10">${t(s.title)}</h2>\n` : ''
+  const heading = s.title ? `        <h2 className="${cls.heading || 'text-3xl font-semibold text-center mb-10'}">${t(s.title)}</h2>\n` : ''
   return BANNER_TS + `export function ${name}() {
   return (
-    <section id=${jsStr(s.id)} className="${DEN.section} bg-base-200">
-      <div className="max-w-6xl mx-auto px-4">
+    <section id=${jsStr(s.id)} className="${DEN.section} ${cls.section || 'bg-base-200'}">
+      <div className="${cls.container || 'max-w-6xl mx-auto px-4'}">
 ${heading}        <div className="grid grid-cols-1 ${colClass} ${DEN.gap}">
 ${cards}
         </div>

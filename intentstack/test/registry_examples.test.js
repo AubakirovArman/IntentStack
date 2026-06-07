@@ -8,7 +8,7 @@ import { parseIntentFile } from '../src/parse.js'
 import { validate } from '../src/validate.js'
 import { buildGraph } from '../src/graph.js'
 import { planFiles } from '../src/emit/index.js'
-import { TARGETS } from '../src/registry.js'
+import { componentClasses, TARGETS } from '../src/registry.js'
 import { DOMAIN_MODULES } from '../src/modules.js'
 
 const repo = fileURLToPath(new URL('../../', import.meta.url))
@@ -34,6 +34,11 @@ test('component registry covers every supported component', () => {
   for (const t of Object.values(TARGETS)) {
     for (const c of t.supported_components) assert.ok(components.has(c), `${c} should have a registry file`)
   }
+})
+
+test('component registry exposes target class maps to codegen', () => {
+  assert.equal(componentClasses('hero', 'web_ts_minimal').title, 'text-5xl font-bold tracking-tight')
+  assert.equal(componentClasses('card_grid', 'next_shadcn').section, 'bg-muted/30')
 })
 
 test('module registry file matches in-code domain module metadata', () => {

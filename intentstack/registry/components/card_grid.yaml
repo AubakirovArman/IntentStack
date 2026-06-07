@@ -7,4 +7,16 @@ props:
     type: number
   - id: items
     type: array
+class_map:
+  web_ts_minimal:
+    section: bg-base-200
+    container: max-w-6xl mx-auto px-4
+    heading: text-3xl font-semibold text-center mb-10
+    card: card bg-base-100 border border-base-200 shadow-sm
+    text: opacity-70
+  next_shadcn:
+    section: bg-muted/30
+    container: mx-auto max-w-6xl px-4
+    heading: mb-10 text-center text-3xl font-semibold
+    text: text-muted-foreground
 targets: [web_ts_minimal, next_shadcn]

@@ -7,4 +7,16 @@ props:
     type: text
   - id: actions
     type: array
+class_map:
+  web_ts_minimal:
+    section: bg-base-100
+    title: text-5xl font-bold tracking-tight
+    subtitle: py-6 text-lg opacity-70
+    actions: flex gap-3 justify-center flex-wrap
+  next_shadcn:
+    section: text-center
+    inner: mx-auto max-w-3xl px-4
+    title: text-5xl font-bold tracking-tight
+    subtitle: mt-6 text-lg text-muted-foreground
+    actions: mt-8 flex flex-wrap justify-center gap-3
 targets: [web_ts_minimal, next_shadcn]

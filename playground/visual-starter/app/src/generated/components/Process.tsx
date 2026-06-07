@@ -10,7 +10,7 @@ export function Process() {
           {"From brief to render"}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
+          <div className="card bg-base-100 border border-base-200 shadow-sm rounded-lg">
             <div className="card-body">
               <h3 className="card-title">{"Brief"}</h3>
               <p className="opacity-70">
@@ -20,7 +20,7 @@ export function Process() {
               </p>
             </div>
           </div>
-          <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
+          <div className="card bg-base-100 border border-base-200 shadow-sm rounded-lg">
             <div className="card-body">
               <h3 className="card-title">{"Model"}</h3>
               <p className="opacity-70">
@@ -30,7 +30,7 @@ export function Process() {
               </p>
             </div>
           </div>
-          <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
+          <div className="card bg-base-100 border border-base-200 shadow-sm rounded-lg">
             <div className="card-body">
               <h3 className="card-title">{"Deliver"}</h3>
               <p className="opacity-70">
