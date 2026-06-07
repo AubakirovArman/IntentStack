@@ -147,6 +147,8 @@ test('openapi exports CRUD contract as JSON and YAML', () => {
   assert.equal(data.paths['/api/leads'].post.operationId, 'create_lead')
   assert.equal(data.paths['/api/leads/{id}'].get.operationId, 'get_lead')
   assert.equal(data.paths['/api/leads/{id}'].put.operationId, 'update_lead')
+  assert.equal(data.paths['/api/health'].get.operationId, 'health')
+  assert.equal(data.paths['/api/metrics'].get.operationId, 'metrics')
   assert.equal(data.components.schemas.Lead.properties.status.enum[0], 'new')
   assert.deepEqual(data.components.schemas.LeadInput.required, ['name', 'phone'])
 
@@ -222,10 +224,11 @@ test('testgen writes generated API contract tests', () => {
     assert.match(res.stdout, /ok generated tests written/)
     const testFile = readFileSync(join(out, 'api-contract.test.mjs'), 'utf8')
     const readme = readFileSync(join(out, 'README.md'), 'utf8')
+    assert.match(testFile, /"path": "\/api\/health"/)
     assert.match(testFile, /"method": "GET"[\s\S]*"path": "\/api\/leads"/)
     assert.match(testFile, /INTENTSTACK_RUN_MUTATION_TESTS/)
     assert.match(testFile, /INTENTSTACK_TEST_LEAD_ID/)
-    assert.match(readme, /Operations generated: 4/)
+    assert.match(readme, /Operations generated: 6/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

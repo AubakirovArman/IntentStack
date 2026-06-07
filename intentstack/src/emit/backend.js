@@ -43,6 +43,12 @@ import { randomUUID } from 'node:crypto'
 import { migrate } from './generated/db/client'
 ${imports.join('\n')}
 
+const metrics = {
+  started_at: new Date().toISOString(),
+  requests_total: 0,
+  requests_by_path: {} as Record<string, number>,
+  last_request: null as null | { method: string; path: string; status: number; duration_ms: number },
+}
 const app = new Hono()
 app.use('/api/*', cors({ origin: (origin) => origin || '*', credentials: true }))
 app.use('/api/*', async (c, next) => {
@@ -54,15 +60,20 @@ app.use('/api/*', async (c, next) => {
   try {
     await next()
   } finally {
+    const path = new URL(c.req.url).pathname
+    const duration = Date.now() - startedAt
+    metrics.requests_total += 1
+    metrics.requests_by_path[path] = (metrics.requests_by_path[path] || 0) + 1
+    metrics.last_request = { method: c.req.method, path, status: c.res.status, duration_ms: duration }
     console.log(JSON.stringify({
       level: 'info',
       type: 'http_request',
       request_id: requestId,
       correlation_id: correlationId,
       method: c.req.method,
-      path: new URL(c.req.url).pathname,
+      path,
       status: c.res.status,
-      duration_ms: Date.now() - startedAt,
+      duration_ms: duration,
     }))
   }
 })
@@ -81,6 +92,11 @@ app.onError((err, c) => {
   return c.json({ error: 'internal_error', request_id: requestId, correlation_id: correlationId }, 500)
 })
 app.get('/api/health', (c) => c.json({ ok: true }))
+app.get('/api/metrics', (c) => c.json({
+  ok: true,
+  uptime_seconds: process.uptime(),
+  ...metrics,
+}))
 ${mounts.join('\n')}
 
 const port = Number(process.env.PORT ?? 8787)

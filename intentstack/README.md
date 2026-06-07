@@ -48,6 +48,7 @@ compiler. It is intentionally not a full Rust port yet.
 - `section.module.add` creates new section modules and inserts page refs in one patch op.
 - `split --write` migrates a monolith intent into modular files.
 - `graph --html` shows module source files and ownership for modular projects.
+- Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
 
 ## Modular Example
 

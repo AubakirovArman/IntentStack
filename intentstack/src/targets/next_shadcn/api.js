@@ -4,6 +4,26 @@ import { BANNER } from './constants.js'
 
 export function apiRoutes(graph) {
   const files = {}
+  files['app/api/health/route.ts'] = BANNER + `export async function GET() {
+  return Response.json({ ok: true })
+}
+`
+  files['app/api/metrics/route.ts'] = BANNER + `const startedAt = Date.now()
+let requestsTotal = 0
+
+export async function GET() {
+  requestsTotal += 1
+  const uptimeSeconds = typeof process.uptime === 'function'
+    ? process.uptime()
+    : Math.round((Date.now() - startedAt) / 1000)
+  return Response.json({
+    ok: true,
+    uptime_seconds: uptimeSeconds,
+    started_at: new Date(startedAt).toISOString(),
+    requests_total: requestsTotal,
+  })
+}
+`
   if (hasActionAuth(graph.actions) || hasPageAuth(graph)) {
     files['app/api/auth/login/route.ts'] = BANNER + `import { loginRequest } from '@/lib/auth'
 

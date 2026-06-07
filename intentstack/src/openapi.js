@@ -39,6 +39,7 @@ export function generateOpenApi(graph) {
     }
     addAuthPaths(spec)
   }
+  addObservabilityPaths(spec)
 
   const byEntity = groupRecordActions(graph)
   for (const [entityId, actions] of Object.entries(byEntity)) {
@@ -319,6 +320,42 @@ function addAuthPaths(spec) {
             authenticated: { type: 'boolean' },
             role: { type: ['string', 'null'] },
             user: { type: ['string', 'null'] },
+          },
+        }),
+      },
+    },
+  }
+}
+
+function addObservabilityPaths(spec) {
+  spec.paths['/api/health'] = {
+    get: {
+      tags: ['Observability'],
+      operationId: 'health',
+      summary: 'Read generated app health status',
+      responses: {
+        200: jsonResponse({
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+          },
+        }),
+      },
+    },
+  }
+  spec.paths['/api/metrics'] = {
+    get: {
+      tags: ['Observability'],
+      operationId: 'metrics',
+      summary: 'Read generated app runtime metrics',
+      responses: {
+        200: jsonResponse({
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+            uptime_seconds: { type: 'number' },
+            started_at: { type: 'string', format: 'date-time' },
+            requests_total: { type: 'integer' },
           },
         }),
       },

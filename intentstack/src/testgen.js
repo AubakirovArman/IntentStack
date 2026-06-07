@@ -9,7 +9,10 @@ export function generateTestFiles(graph) {
 }
 
 function apiOperations(graph) {
-  const out = []
+  const out = [
+    { action: 'health', method: 'GET', path: '/api/health', entity: 'Observability', idEnv: '', mutation: false, body: null, expected: [200], auth: false },
+    { action: 'metrics', method: 'GET', path: '/api/metrics', entity: 'Observability', idEnv: '', mutation: false, body: null, expected: [200], auth: false },
+  ]
   const byEntity = {}
   for (const action of graph.actions) {
     if (!action.entity || !RECORD_ACTIONS.includes(action.type)) continue

@@ -18,7 +18,7 @@ Status legend:
 8. Generated/custom extension model: `done`. `custom_component` validates source/export, validates declared props schemas, and emits wrappers with typed props for both targets.
 9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff, generated API contract tests, and examples x targets verify tests exist; GitHub Actions runs lint, Node tests, Rust tests, and generated app build matrix for both targets.
 10. Docs and AI-agent protocol: `done`. Core docs exist, AGENTS/README are current, and `intentstack docs --out` generates a static documentation site.
-11. Security, verification, metrics: `done`. Validation, safe CRUD basics, secret checks, auth guards, sessions, `verify`, `stats`, and `security` audit gates exist and are tested.
+11. Security, verification, metrics: `done`. Validation, safe CRUD basics, secret checks, auth guards, sessions, generated health/metrics endpoints, `verify`, `stats`, and `security` audit gates exist and are tested.
 
 ## Roadmap
 
@@ -51,3 +51,4 @@ Status legend:
 35. Next adapter modularization: `done`. The `next_shadcn` target now delegates project scaffolding, UI primitives, data layer, API routes, and frontend rendering to focused modules instead of one monolithic adapter file.
 36. Generated test framework: `done`. `intentstack testgen` writes Node `node:test` API contract tests from CRUD record actions, including target-aware base URLs, auth token support, ID-driven item tests, and opt-in mutating tests.
 37. Deploy preparation: `done`. `intentstack deploy --platform vercel|netlify|render` validates intent, can prepare the generated app, writes provider config files, and prints the next provider command without triggering remote login by default.
+38. Observability surface: `done`. Generated Web/Hono and Next apps expose `/api/health` and `/api/metrics`; Web tracks request counts by path and last request duration, while Next exposes runtime uptime/counts for the metrics route.
