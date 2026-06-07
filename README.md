@@ -92,10 +92,10 @@ Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, 
 `pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; derived API clients; inline
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
-verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; durable workflow run log/retry; workflow/integration metadata and
+verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; durable workflow run log/retry; workflow/integration metadata and provider-specific integration clients;
 webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; visual editor export; context-aware patch suggestions; voice/text-to-patch commands; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
 
-Still partial: Rust compiler core, provider-specific integration clients and a full visual editor.
+Still partial: Rust compiler core and a full visual editor.
 
 ## The agent loop (patches)
 
