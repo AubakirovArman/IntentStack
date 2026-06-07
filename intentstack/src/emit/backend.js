@@ -49,16 +49,20 @@ const metrics = {
   started_at: new Date().toISOString(),
   requests_total: 0,
   requests_by_path: {} as Record<string, number>,
-  last_request: null as null | { method: string; path: string; status: number; duration_ms: number },
+  last_request: null as null | { method: string; path: string; status: number; duration_ms: number; trace_id: string },
 }
 const app = new Hono()
 app.use('/api/*', cors({ origin: (origin) => origin || '*', credentials: true }))
 app.use('/api/*', async (c, next) => {
   const requestId = c.req.header('x-request-id') || randomUUID()
   const correlationId = c.req.header('x-correlation-id') || requestId
+  const traceId = traceIdFromHeader(c.req.header('traceparent')) || newTraceId()
+  const spanId = newSpanId()
   const startedAt = Date.now()
   c.header('X-Request-Id', requestId)
   c.header('X-Correlation-Id', correlationId)
+  c.header('X-Trace-Id', traceId)
+  c.header('traceparent', \`00-\${traceId}-\${spanId}-01\`)
   try {
     await next()
   } finally {
@@ -66,12 +70,14 @@ app.use('/api/*', async (c, next) => {
     const duration = Date.now() - startedAt
     metrics.requests_total += 1
     metrics.requests_by_path[path] = (metrics.requests_by_path[path] || 0) + 1
-    metrics.last_request = { method: c.req.method, path, status: c.res.status, duration_ms: duration }
+    metrics.last_request = { method: c.req.method, path, status: c.res.status, duration_ms: duration, trace_id: traceId }
     console.log(JSON.stringify({
       level: 'info',
       type: 'http_request',
       request_id: requestId,
       correlation_id: correlationId,
+      trace_id: traceId,
+      span_id: spanId,
       method: c.req.method,
       path,
       status: c.res.status,
@@ -82,16 +88,18 @@ app.use('/api/*', async (c, next) => {
 app.onError((err, c) => {
   const requestId = c.req.header('x-request-id') || randomUUID()
   const correlationId = c.req.header('x-correlation-id') || requestId
+  const traceId = traceIdFromHeader(c.req.header('traceparent')) || newTraceId()
   console.error(JSON.stringify({
     level: 'error',
     type: 'http_error',
     request_id: requestId,
     correlation_id: correlationId,
+    trace_id: traceId,
     method: c.req.method,
     path: new URL(c.req.url).pathname,
     message: err.message,
   }))
-  return c.json({ error: 'internal_error', request_id: requestId, correlation_id: correlationId }, 500)
+  return c.json({ error: 'internal_error', request_id: requestId, correlation_id: correlationId, trace_id: traceId }, 500)
 })
 app.get('/api/health', (c) => c.json({ ok: true }))
 app.get('/api/metrics', (c) => c.json({
@@ -105,6 +113,19 @@ const port = Number(process.env.PORT ?? 8787)
 await migrate()
 const server = serve({ fetch: app.fetch, port })
 console.log(\`[intentstack] API listening on http://localhost:\${port}\`)
+
+function newTraceId() {
+  return randomUUID().replace(/-/g, '')
+}
+
+function newSpanId() {
+  return randomUUID().replace(/-/g, '').slice(0, 16)
+}
+
+function traceIdFromHeader(value: string | undefined) {
+  const match = /^00-([a-f0-9]{32})-[a-f0-9]{16}-[a-f0-9]{2}$/i.exec(value || '')
+  return match?.[1]?.toLowerCase() || ''
+}
 
 function shutdown(signal: NodeJS.Signals) {
   console.log(JSON.stringify({ level: 'info', type: 'shutdown', signal }))

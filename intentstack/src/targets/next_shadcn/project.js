@@ -87,18 +87,37 @@ import type { NextRequest } from 'next/server'
 export function middleware(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') ?? crypto.randomUUID()
   const correlationId = req.headers.get('x-correlation-id') ?? requestId
+  const traceId = traceIdFromHeader(req.headers.get('traceparent')) || newTraceId()
+  const spanId = newSpanId()
   const res = NextResponse.next()
   res.headers.set('X-Request-Id', requestId)
   res.headers.set('X-Correlation-Id', correlationId)
+  res.headers.set('X-Trace-Id', traceId)
+  res.headers.set('traceparent', \`00-\${traceId}-\${spanId}-01\`)
   console.log(JSON.stringify({
     level: 'info',
     type: 'http_request',
     request_id: requestId,
     correlation_id: correlationId,
+    trace_id: traceId,
+    span_id: spanId,
     method: req.method,
     path: req.nextUrl.pathname,
   }))
   return res
+}
+
+function newTraceId() {
+  return crypto.randomUUID().replace(/-/g, '')
+}
+
+function newSpanId() {
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+}
+
+function traceIdFromHeader(value: string | null) {
+  const match = /^00-([a-f0-9]{32})-[a-f0-9]{16}-[a-f0-9]{2}$/i.exec(value || '')
+  return match?.[1]?.toLowerCase() || ''
 }
 
 export const config = {
