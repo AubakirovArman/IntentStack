@@ -65,6 +65,9 @@ content block in `frontend/sections/docs/content.section.yaml`.
 Bad: rewrite the whole root intent for a one-line text change; flatten a modular app into one
 root YAML without being explicitly asked.
 
+For new page sections in modular projects, prefer `section.module.add` over `section.add`. It
+creates the section owner file and keeps the page module as an ordered list of `ref`s.
+
 ## Patches
 
 ```bash

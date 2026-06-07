@@ -1,5 +1,6 @@
 // Patch DSL (PRD 12-13). Apply small, semantic, validated changes to the intent AST.
 // An agent's normal loop is: write a patch -> check -> build, NOT rewrite the whole intent.
+import { dirname, resolve } from 'node:path'
 
 export function applyPatch(ast, patchDoc) {
   const ops = patchDoc?.patch || patchDoc?.ops || []
@@ -90,6 +91,37 @@ function updateObject(target, op, excluded = ['op', 'id']) {
     if (!excluded.includes(k)) target[k] = v
   }
   return before
+}
+
+function insertSection(page, section, op) {
+  page.sections = page.sections || []
+  if (page.sections.some((s) => s.id === section.id)) throw new Error(`section "${section.id}" already exists on ${page.id}`)
+  let idx = page.sections.length
+  if (op.after) { const i = page.sections.findIndex((s) => s.id === op.after); if (i >= 0) idx = i + 1 }
+  if (op.before) { const i = page.sections.findIndex((s) => s.id === op.before); if (i >= 0) idx = i }
+  if (op.index !== undefined) idx = Math.max(0, Math.min(Number(op.index), page.sections.length))
+  page.sections.splice(idx, 0, section)
+  return idx
+}
+
+function registerSectionModule(ast, page, section, op) {
+  const metadata = ast.__intentstack
+  if (!metadata?.modular) throw new Error('section.module.add requires a modular intent project')
+  const rootPath = metadata.rootPath
+  if (!rootPath) throw new Error('section.module.add cannot resolve the root intent path')
+  const file = resolve(dirname(rootPath), op.file || op.path || `frontend/sections/${kebab(page.id)}/${kebab(section.id)}.section.yaml`)
+  metadata.owners = metadata.owners || {}
+  metadata.owners.sections = metadata.owners.sections || {}
+  metadata.owners.sections[section.id] = { file, kind: 'section', page: page.id }
+  metadata.sourceFiles = metadata.sourceFiles || []
+  if (!metadata.sourceFiles.includes(file)) metadata.sourceFiles.push(file)
+  metadata.includes = metadata.includes || []
+  if (!metadata.includes.includes('frontend/sections/**/*.yaml')) metadata.includes.push('frontend/sections/**/*.yaml')
+  return file
+}
+
+function kebab(value) {
+  return String(value).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'module'
 }
 
 // ---- operations -----------------------------------------------------------
@@ -389,13 +421,24 @@ const OPS = {
 
   'section.add'(ast, op) {
     const p = findPage(ast, op.page)
-    p.sections = p.sections || []
-    if (p.sections.some((s) => s.id === op.section.id)) throw new Error(`section "${op.section.id}" already exists on ${op.page}`)
-    let idx = p.sections.length
-    if (op.after) { const i = p.sections.findIndex((s) => s.id === op.after); if (i >= 0) idx = i + 1 }
-    if (op.before) { const i = p.sections.findIndex((s) => s.id === op.before); if (i >= 0) idx = i }
-    p.sections.splice(idx, 0, op.section)
+    insertSection(p, op.section, op)
     return { summary: `add section ${op.section.id} (${op.section.type}) to ${op.page}` }
+  },
+
+  'section.module.add'(ast, op) {
+    const p = findPage(ast, op.page)
+    const section = op.section || {
+      id: op.id,
+      type: op.type,
+      title: op.title,
+      items: op.items,
+      blocks: op.blocks,
+    }
+    if (!section?.id) throw new Error('section.module.add requires section.id or id')
+    if (!section.type) throw new Error('section.module.add requires section.type or type')
+    insertSection(p, section, op)
+    const file = registerSectionModule(ast, p, section, op)
+    return { summary: `add section module ${section.id} (${section.type}) to ${op.page}`, file }
   },
 
   'section.update'(ast, op) {

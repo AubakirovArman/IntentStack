@@ -39,6 +39,7 @@ compiler. It is intentionally not a full Rust port yet.
 - `content` sections generate structured docs/content blocks: headings, paragraphs, lists, code, links, callouts and tables.
 - Modular intent is the default project structure. Keep `intent/app.intent.yaml` thin with `includes`; put behavior under `shared/`, `backend/`, and `frontend/`.
 - `apply --write` preserves modular structure by writing changes back to owner files.
+- `section.module.add` creates new section modules and inserts page refs in one patch op.
 - `split --write` migrates a monolith intent into modular files.
 - `graph --html` shows module source files and ownership for modular projects.
 

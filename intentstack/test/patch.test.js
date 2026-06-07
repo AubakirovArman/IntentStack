@@ -33,6 +33,7 @@ test('patchOps exposes the PRD command surface implemented by the compiler', () 
     'page.update',
     'page.delete',
     'section.add',
+    'section.module.add',
     'section.update',
     'section.remove',
     'section.move',

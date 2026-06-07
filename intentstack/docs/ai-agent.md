@@ -23,6 +23,7 @@ Rules:
 - For modular projects, prefer `apply --write`; it writes changes back to owner module files.
 - Do not flatten a modular app into one root YAML unless explicitly exporting with `--out-intent`.
 - `intentstack new` creates modular projects by default; `--single-file` is only for legacy monoliths.
+- Use `section.module.add` for new sections so the page gets a `ref` and the section gets its own module file.
 
 Discovery and verification:
 

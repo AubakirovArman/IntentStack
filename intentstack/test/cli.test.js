@@ -284,3 +284,41 @@ includes:
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test('section.module.add creates a section module and page ref', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-section-module-'))
+  try {
+    const created = run(['new', dir, '--name', 'Section Module App'])
+    assert.equal(created.status, 0, created.stderr)
+    const patch = join(dir, 'add-section.patch.yaml')
+    writeFileSync(patch, `patch:
+  - op: section.module.add
+    page: home
+    after: hero
+    section:
+      id: docs_teaser
+      type: card_grid
+      title: Docs teaser
+      items:
+        - title: Module file
+          text: This section is written as its own file.
+`)
+
+    const applied = run(['apply', patch, '--project', dir, '--write'])
+    assert.equal(applied.status, 0, applied.stderr)
+    assert.match(applied.stdout, /section module docs_teaser/)
+
+    const page = readFileSync(join(dir, 'intent/frontend/pages/home.page.yaml'), 'utf8')
+    const sectionPath = join(dir, 'intent/frontend/sections/home/docs-teaser.section.yaml')
+    const section = readFileSync(sectionPath, 'utf8')
+    assert.match(page, /ref: docs_teaser/)
+    assert.doesNotMatch(page, /type: card_grid/)
+    assert.match(section, /id: docs_teaser/)
+    assert.match(section, /type: card_grid/)
+
+    const checked = run(['check', '--project', dir])
+    assert.equal(checked.status, 0, checked.stderr)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

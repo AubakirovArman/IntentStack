@@ -79,6 +79,28 @@ Shared modules can contain `theme`, `navigation`, or `auth`.
 
 If `--out-intent` points to a different file, the CLI exports a single assembled intent copy instead.
 
+Use `section.module.add` when adding a new section to a modular page. It creates a section owner
+module and writes a `ref` into the page module:
+
+```yaml
+version: 0.1
+patch:
+  - op: section.module.add
+    page: docs
+    after: docs_content
+    section:
+      id: docs_video_example
+      type: content
+      title: Video example
+      blocks:
+        - id: intro
+          type: paragraph
+          text: Put the live example first, then show the patch code below it.
+```
+
+By default the new section file is written to
+`frontend/sections/<page>/<section>.section.yaml`. Pass `file:` to choose another module path.
+
 ## Diagnostics
 
 For modular projects diagnostics include file provenance:
