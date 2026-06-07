@@ -35,3 +35,12 @@ Status legend:
 19. Multi-target support for shared nav/content: `done`. `web_ts_minimal` and `next_shadcn` both emit shared `AppNav`, docs routes, and generated content sections from the same intent.
 20. Tests/examples/schema for nav/content: `done`. Unit, patch, validation, CLI/schema, golden, registry, and `docs_content` example coverage are present; `verify --npm-build` passes the example matrix.
 21. Visual starter migration: `done`. `playground/visual-starter` now uses shared navigation and a `content` docs page; web and Next generated apps pass typecheck/build.
+22. Modular intent manifest: `done`. Root manifests can declare `includes`, and the loader assembles focused module files into one validated Core IR.
+23. Frontend intent modules: `done`. Page modules can reference section modules by `ref`; examples and tests cover Web and Next generation.
+24. Backend intent modules: `done`. Entity and action modules assemble into generated database schema, API routes, and API clients.
+25. Shared intent modules: `done`. Theme, navigation, and auth can live in `shared/*.yaml`, with owners tracked in loader metadata.
+26. Module patch writeback: `done`. `apply --write` preserves modular projects and writes edits back to owner files instead of flattening the root manifest.
+27. Provenance diagnostics: `done`. Modular diagnostics include source file provenance in text and JSON output.
+28. Split command: `done`. `intentstack split` dry-runs or writes modular files from a monolith intent.
+29. Content authoring improvements: `done`. Content blocks now support links, callouts, and tables; patch ops include `content.blocks.set` and `content.block.move`.
+30. Module graph UI: `done`. `graph --json` and `graph --html` expose module source files and ownership.

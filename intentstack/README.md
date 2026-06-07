@@ -13,6 +13,7 @@ node src/index.js check --project <dir> --json
 node src/index.js build --project <dir>
 node src/index.js diff --project <dir> --verbose
 node src/index.js apply <patch.yaml> --project <dir> --write
+node src/index.js split --project <dir> --write
 node src/index.js list_capabilities --json
 node src/index.js schema --out schema/intent.v0.1.schema.json
 node src/index.js graph --project <dir> --html graph.html
@@ -34,7 +35,21 @@ compiler. It is intentionally not a full Rust port yet.
 
 - Top-level `navigation` generates one shared nav component reused across pages.
 - `page.navigation: false` opts a page out of shared navigation.
-- `content` sections generate structured docs/content blocks: headings, paragraphs, lists and code.
+- `content` sections generate structured docs/content blocks: headings, paragraphs, lists, code, links, callouts and tables.
+- Modular intent projects can keep a thin `intent/app.intent.yaml` with `includes` and focused files under `shared/`, `backend/`, and `frontend/`.
+- `apply --write` preserves modular structure by writing changes back to owner files.
+- `split --write` migrates a monolith intent into modular files.
+- `graph --html` shows module source files and ownership for modular projects.
+
+## Modular Example
+
+```bash
+node src/index.js check --project examples/modular_site
+node src/index.js graph --project examples/modular_site --html modular-graph.html
+node src/index.js build --project examples/modular_site --out app-modular
+```
+
+Read `docs/modular-intent.md` for the module layout and patch writeback contract.
 
 ## Test Gates
 
@@ -42,8 +57,10 @@ compiler. It is intentionally not a full Rust port yet.
 npm test
 cargo test
 node ../intentstack/src/index.js check --project ../demo
+node ../intentstack/src/index.js check --project examples/modular_site
 node ../intentstack/src/index.js build --project ../demo
 node ../intentstack/src/index.js build --project ../demo --target next_shadcn --out app-next
+node ../intentstack/src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 ```
 
 Generated apps should also pass `npm run typecheck` and `npm run build`.
