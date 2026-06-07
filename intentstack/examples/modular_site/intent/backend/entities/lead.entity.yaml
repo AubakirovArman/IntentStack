@@ -1,0 +1,19 @@
+entity:
+  id: Lead
+  table: leads
+  fields:
+    - id: name
+      type: string
+      label: Name
+      required: true
+    - id: email
+      type: string
+      label: Email
+      required: true
+    - id: message
+      type: text
+      label: Message
+    - id: status
+      type: enum
+      label: Status
+      values: [new, contacted, qualified]

@@ -1,0 +1,10 @@
+section:
+  id: leads_table
+  type: table
+  entity: Lead
+  source:
+    action: list_leads
+  columns: [name, email, status]
+  row_actions:
+    - type: edit
+    - type: delete

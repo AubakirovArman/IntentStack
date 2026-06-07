@@ -1,0 +1,9 @@
+section:
+  id: lead_form
+  type: form
+  title: Capture a lead
+  entity: Lead
+  fields: [name, email, message, status]
+  submit:
+    action: create_lead
+    success_message: Lead saved.

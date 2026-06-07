@@ -1,0 +1,7 @@
+page:
+  id: leads
+  path: /leads
+  layout: dashboard
+  sections:
+    - ref: lead_form
+    - ref: leads_table

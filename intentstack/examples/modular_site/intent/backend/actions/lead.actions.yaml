@@ -1,0 +1,13 @@
+actions:
+  - id: create_lead
+    type: create_record
+    entity: Lead
+  - id: list_leads
+    type: list_records
+    entity: Lead
+  - id: update_lead
+    type: update_record
+    entity: Lead
+  - id: delete_lead
+    type: delete_record
+    entity: Lead

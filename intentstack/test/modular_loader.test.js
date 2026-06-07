@@ -3,10 +3,13 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { loadIntentProject } from '../src/intent_loader.js'
 import { validate } from '../src/validate.js'
 import { buildGraph } from '../src/graph.js'
 import { planFiles } from '../src/emit/index.js'
+
+const modularSite = fileURLToPath(new URL('../examples/modular_site', import.meta.url))
 
 test('loader assembles a manifest with included intent modules', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-modular-'))
@@ -124,4 +127,39 @@ includes:
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('loader assembles backend entity and action modules into generated APIs', async () => {
+  const { ast } = await loadIntentProject(modularSite, {})
+  const metadata = ast.__intentstack
+
+  assert.equal(metadata.modular, true)
+  assert.equal(ast.entities.length, 1)
+  assert.equal(ast.entities[0].id, 'Lead')
+  assert.deepEqual(ast.actions.map((action) => action.type).sort(), [
+    'create_record',
+    'delete_record',
+    'list_records',
+    'update_record',
+  ])
+  assert.match(metadata.owners.entities.Lead.file, /backend[\\/]entities[\\/]lead\.entity\.yaml$/)
+  assert.match(metadata.owners.actions.create_lead.file, /backend[\\/]actions[\\/]lead\.actions\.yaml$/)
+  assert.equal(validate(ast).hasErrors(), false)
+
+  const webFiles = planFiles(buildGraph(ast))
+  assert.match(webFiles['server/generated/routes/lead.ts'], /r\.post\('\/leads'/)
+  assert.match(webFiles['server/generated/routes/lead.ts'], /r\.put\('\/leads\/:id'/)
+  assert.match(webFiles['src/generated/api/client.ts'], /export async function createLead/)
+  assert.match(webFiles['src/generated/api/client.ts'], /export async function listLead/)
+  assert.match(webFiles['src/generated/components/LeadForm.tsx'], /createLead/)
+  assert.match(webFiles['src/generated/components/LeadsTable.tsx'], /listLead/)
+
+  const nextAst = JSON.parse(JSON.stringify(ast))
+  nextAst.project.target = 'next_shadcn'
+  assert.equal(validate(nextAst).hasErrors(), false)
+  const nextFiles = planFiles(buildGraph(nextAst))
+  assert.match(nextFiles['app/api/leads/route.ts'], /export async function POST/)
+  assert.match(nextFiles['app/api/leads/[id]/route.ts'], /export async function PUT/)
+  assert.match(nextFiles['lib/api/client.ts'], /export async function createLead/)
+  assert.match(nextFiles['components/generated/LeadForm.tsx'], /createLead/)
 })
