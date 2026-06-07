@@ -3,6 +3,7 @@
 import { posix } from 'node:path'
 import { pascal, jsStr, t } from '../emit/util.js'
 import { schemaImports, schemaBody, migrationSql, validatorBody, entityClientNeeds } from '../emit/shared/datamodel.js'
+import { dbDriver } from '../emit/shared/db_driver.js'
 import { componentClasses, RECORD_ACTIONS } from '../registry.js'
 import { declaredUsers, hasActionAuth, hasPageAuth, integrationsTs, isActivePolicy, reactAuthTs, requestAuthTs, roleLiteral, workflowsTs } from '../emit/shared/modules.js'
 import { createSectionRenderer } from '../emit/shared/sections.js'
@@ -436,26 +437,16 @@ export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell }
 // ---- data layer (shared content, Next placement) -------------------------
 function dataLayer(graph) {
   const files = {}
+  const driver = dbDriver(graph)
   files['lib/db/schema.ts'] = BANNER + schemaImports() + schemaBody(graph)
-  files['lib/db/client.ts'] = BANNER + `import { drizzle } from 'drizzle-orm/libsql'
-import { createClient } from '@libsql/client'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
-const url = process.env.DB_URL ?? 'file:./data.db'
-export const client = createClient({ url })
-export const db = drizzle(client)
-
-let migrated: Promise<unknown> | null = null
-export function ensureMigrated() {
-  if (!migrated) {
-    const sql = readFileSync(join(process.cwd(), 'migrations/0000_init.sql'), 'utf8')
-    migrated = client.executeMultiple(sql)
-  }
-  return migrated
-}
-`
-  files['migrations/0000_init.sql'] = migrationSql(graph)
+  files['lib/db/client.ts'] = driver.clientTs({
+    banner: BANNER,
+    functionName: 'ensureMigrated',
+    memoized: true,
+    pathImports: `import { join } from 'node:path'`,
+    migrationPathExpr: `join(process.cwd(), 'migrations/0000_init.sql')`,
+  })
+  files[driver.migrationFile] = migrationSql(graph)
   for (const e of graph.entities) {
     files[`lib/validators/${e.id.toLowerCase()}.ts`] = BANNER + validatorBody(e)
   }

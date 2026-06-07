@@ -27,6 +27,9 @@ test('web_ts_minimal generates CRUD routes, API client, stats and pricing sectio
   )
   const files = planFiles(buildGraph(ast))
 
+  assert.match(files['server/generated/db/client.ts'], /__intentstack_migrations/)
+  assert.match(files['server/generated/db/client.ts'], /createHash\('sha256'\)/)
+  assert.match(files['server/generated/db/client.ts'], /different checksum/)
   assert.match(files['server/generated/routes/lead.ts'], /r\.get\('\/leads\/:id'/)
   assert.match(files['server/generated/routes/lead.ts'], /r\.put\('\/leads\/:id'/)
   assert.match(files['server/generated/routes/lead.ts'], /r\.delete\('\/leads\/:id'/)
@@ -57,6 +60,9 @@ test('next_shadcn generates CRUD routes, API client, stats and pricing sections'
   )
   const files = planFiles(buildGraph(ast))
 
+  assert.match(files['lib/db/client.ts'], /__intentstack_migrations/)
+  assert.match(files['lib/db/client.ts'], /createHash\('sha256'\)/)
+  assert.match(files['lib/db/client.ts'], /different checksum/)
   assert.ok(files['app/api/leads/[id]/route.ts'])
   assert.match(files['app/api/leads/[id]/route.ts'], /export async function GET/)
   assert.match(files['app/api/leads/[id]/route.ts'], /export async function PUT/)

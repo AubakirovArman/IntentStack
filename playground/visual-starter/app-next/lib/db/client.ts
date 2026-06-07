@@ -2,20 +2,66 @@
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 const url = process.env.DB_URL ?? "file:./data.db";
 export const client = createClient({ url });
 export const db = drizzle(client);
 
-let migrated: Promise<unknown> | null = null;
-export function ensureMigrated() {
-  if (!migrated) {
-    const sql = readFileSync(
-      join(process.cwd(), "migrations/0000_init.sql"),
-      "utf8",
-    );
-    migrated = client.executeMultiple(sql);
+const MIGRATIONS = [
+  { id: "0000_init", path: join(process.cwd(), "migrations/0000_init.sql") },
+] as const;
+
+async function ensureMigrationTable() {
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS __intentstack_migrations (
+      id text PRIMARY KEY NOT NULL,
+      checksum text NOT NULL,
+      applied_at text NOT NULL
+    )
+  `);
+}
+
+function checksum(sql: string) {
+  return createHash("sha256").update(sql).digest("hex");
+}
+
+async function migrationRecord(id: string) {
+  const result = await client.execute({
+    sql: "SELECT checksum FROM __intentstack_migrations WHERE id = ?",
+    args: [id],
+  });
+  return result.rows[0] as { checksum?: string } | undefined;
+}
+
+async function markApplied(id: string, hash: string) {
+  await client.execute({
+    sql: "INSERT INTO __intentstack_migrations (id, checksum, applied_at) VALUES (?, ?, ?)",
+    args: [id, hash, new Date().toISOString()],
+  });
+}
+
+async function runMigrations() {
+  await ensureMigrationTable();
+  for (const migration of MIGRATIONS) {
+    const sql = readFileSync(migration.path, "utf8");
+    const hash = checksum(sql);
+    const existing = await migrationRecord(migration.id);
+    if (existing) {
+      if (existing.checksum !== hash)
+        throw new Error(
+          `Migration ${migration.id} was already applied with a different checksum.`,
+        );
+      continue;
+    }
+    await client.executeMultiple(sql);
+    await markApplied(migration.id, hash);
   }
+}
+
+let migrated: Promise<void> | null = null;
+export function ensureMigrated() {
+  if (!migrated) migrated = runMigrations();
   return migrated;
 }
