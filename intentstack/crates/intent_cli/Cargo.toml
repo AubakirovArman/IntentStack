@@ -3,6 +3,11 @@ name = "intent_cli"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+intent_core = { path = "../intent_core" }
+serde = "1"
+serde_json = "1"
+
 [[bin]]
 name = "intentstack"
 path = "src/main.rs"

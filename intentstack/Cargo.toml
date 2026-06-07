@@ -1,3 +1,3 @@
 [workspace]
-members = ["crates/intent_cli"]
+members = ["crates/intent_cli", "crates/intent_core"]
 resolver = "2"

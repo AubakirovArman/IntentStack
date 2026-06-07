@@ -30,10 +30,14 @@ node src/index.js stats --project <dir> --json
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
 node src/index.js docs --out docs-site
+cargo run -p intent_cli -- core inspect ../demo/intent/app.intent.yaml --json
 ```
 
-The Rust crate under `crates/intent_cli` is a CLI wrapper around this Node reference
-compiler. It is intentionally not a full Rust port yet.
+The Rust workspace includes `crates/intent_core`, which parses YAML/JSON intent into a typed
+Core IR with diagnostics, a symbol table, resolved references, inferred action/section types,
+bindings, and pass summaries. `crates/intent_cli` still forwards normal app generation commands
+to the Node reference emitter, while `intentstack core check|inspect|version` exercises the Rust
+core directly. Full Rust emitter parity is intentionally still future work.
 
 ## Targets
 

@@ -27,7 +27,7 @@ schema, API and form/table wiring — all generated from one source of truth.
 
 | Path | What it is |
 |------|------------|
-| `intentstack/` | The compiler (reference implementation, plain ESM JS — runs on Node, no build step). Stands in for the eventual Rust compiler so the thesis can be proven fast. |
+| `intentstack/` | The compiler workspace: Node reference emitter plus Rust crates for the emerging compiler core and CLI wrapper. |
 | `demo/intent/app.intent.yaml` | The canonical example: a VoiceAgent landing page (navbar, hero, features, lead form, footer) + a leads dashboard, backed by a `Lead` entity and `create_lead` / `list_leads` actions. |
 | `demo/intent/broken.example.yaml` | A deliberately broken intent that shows the validator catching mistakes (with "did you mean?" suggestions and `fix_hint`s) **before any code is generated**. |
 | `demo/app/` | Generated app, target **web_ts_minimal** (Vite/React/daisyUI + Hono). |
@@ -93,9 +93,9 @@ Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, 
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; durable workflow run log/retry; workflow/integration metadata and provider-specific integration clients;
-webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; visual editor export; context-aware patch suggestions; voice/text-to-patch commands; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
+webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; visual editor export; context-aware patch suggestions; voice/text-to-patch commands; Rust `intent_core` with YAML/JSON parsing, semantic diagnostics, symbol table, resolved refs, typed graph, bindings and pass summaries; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust core/wrapper tests, and generated app build matrix.
 
-Still partial: Rust compiler core and a full visual editor.
+Still partial: full Rust emitter parity and a full visual editor.
 
 ## The agent loop (patches)
 
