@@ -782,7 +782,7 @@ function help() {
     '  intentstack voice   "add pricing section" [--json]              convert voice/text intent to patch',
     '  intentstack editor  [--project DIR] [--out FILE|--serve]         export or serve visual patch editor',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
-    '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
+    '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract + Playwright E2E tests',
     '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',
     '  intentstack themes  [--json|--apply PRESET --write]              list/apply theme packs',
     '  intentstack marketplace [--json] [--kind K]                      list local extensions',
