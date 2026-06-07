@@ -58,6 +58,32 @@ test('new creates a checkable project and migrate handles v0.1 no-op', () => {
   }
 })
 
+test('split writes a monolith intent into modular files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-split-'))
+  try {
+    const created = run(['new', dir, '--name', 'Split App'])
+    assert.equal(created.status, 0, created.stderr)
+    const dryRun = run(['split', '--project', dir])
+    assert.equal(dryRun.status, 0, dryRun.stderr)
+    assert.match(dryRun.stdout, /frontend\/pages\/home\.page\.yaml/)
+    assert.match(dryRun.stdout, /\(dry run/)
+
+    const split = run(['split', '--project', dir, '--write'])
+    assert.equal(split.status, 0, split.stderr)
+    assert.equal(existsSync(join(dir, 'intent/shared/navigation.yaml')), true)
+    assert.equal(existsSync(join(dir, 'intent/backend/entities/lead.entity.yaml')), true)
+    assert.equal(existsSync(join(dir, 'intent/backend/actions/create-lead.action.yaml')), true)
+    assert.equal(existsSync(join(dir, 'intent/frontend/pages/home.page.yaml')), true)
+    assert.equal(existsSync(join(dir, 'intent/frontend/sections/home/hero.section.yaml')), true)
+    assert.match(readFileSync(join(dir, 'intent/app.intent.yaml'), 'utf8'), /includes:/)
+
+    const checked = run(['check', '--project', dir])
+    assert.equal(checked.status, 0, checked.stderr)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('doctor validates demo project and reports planned files', () => {
   const res = run(['doctor', '--project', 'demo'])
   assert.equal(res.status, 0, res.stderr)
