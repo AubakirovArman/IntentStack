@@ -20,6 +20,7 @@ import { renderGraphHtml } from './visual_graph.js'
 import { generateDocsSite } from './docs_site.js'
 import { formatOpenApi, generateOpenApi, openApiFormat } from './openapi.js'
 import { generateTestFiles } from './testgen.js'
+import { deploymentPlan } from './deploy.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -358,6 +359,50 @@ async function main() {
     return
   }
 
+  if (cmd === 'deploy') {
+    const platform = flag('platform', (args[1] && !args[1].startsWith('--')) ? args[1] : null)
+    if (!platform) { console.error('Usage: intentstack deploy --platform vercel|netlify|render [--project DIR] [--out DIR] [--dry-run] [--no-build]'); process.exit(2) }
+    let plan
+    const { intentPath, ast } = await loadAst(projectDir, cfg)
+    const coreAst = normalize(ast)
+    const outDir = resolve(projectDir, flag('out', cfg.out || 'app'))
+    const d = validate(coreAst, { projectDir, outDir })
+    if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
+    const graph = buildGraph(coreAst)
+    try { plan = deploymentPlan(graph, platform) }
+    catch (e) { console.error(e.message); process.exit(2) }
+    console.log(`\nIntentStack deploy - ${intentPath}`)
+    console.log(`Platform: ${plan.platform}`)
+    console.log(`Output app: ${outDir}`)
+    console.log(`Command: ${plan.command}`)
+    for (const warning of plan.warnings) console.log(`Warning: ${warning}`)
+    console.log('\nDeployment files:')
+    for (const file of Object.keys(plan.files).sort()) console.log(`  + ${file}`)
+    if (args.includes('--dry-run')) {
+      console.log('\n(dry run - remove --dry-run to write deployment files)')
+      return
+    }
+    if (!args.includes('--no-build')) {
+      const written = emit(graph, outDir)
+      const format = formatGeneratedFiles(outDir, written, { enabled: !args.includes('--no-format') })
+      const verify = verifyGeneratedApp(outDir, {
+        enabled: !args.includes('--no-verify'),
+        install: args.includes('--verify-install'),
+      })
+      if (format.some((row) => row.status === 'failed')) process.exit(1)
+      if (verify.status === 'failed') process.exit(1)
+      console.log(`\nok generated app prepared (${written.length} files).`)
+    }
+    for (const [rel, content] of Object.entries(plan.files)) {
+      const outPath = join(outDir, rel)
+      mkdirSync(dirname(outPath), { recursive: true })
+      writeFileSync(outPath, content)
+    }
+    console.log(`ok deployment files written -> ${outDir}`)
+    console.log(`Next: cd ${outDir} && ${plan.command}`)
+    return
+  }
+
   if (cmd === 'stats') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -578,6 +623,7 @@ function help() {
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
+    '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',
     '  intentstack stats   [--project DIR] [--json] [--out-stats FILE]  print app/compiler metrics',
     '  intentstack security [--project DIR] [--json] [--strict]          audit security posture',
     '  intentstack docs    [--project DIR] [--out DIR]                  generate static docs site',

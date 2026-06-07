@@ -231,6 +231,30 @@ test('testgen writes generated API contract tests', () => {
   }
 })
 
+test('deploy prepares provider configuration without remote side effects', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-deploy-'))
+  try {
+    const dryOut = join(dir, 'dry-app')
+    const dry = run(['deploy', '--project', 'demo', '--platform', 'vercel', '--out', dryOut, '--dry-run'])
+    assert.equal(dry.status, 0, dry.stderr)
+    assert.match(dry.stdout, /Platform: vercel/)
+    assert.match(dry.stdout, /vercel\.json/)
+    assert.equal(existsSync(join(dryOut, 'vercel.json')), false)
+
+    const out = join(dir, 'render-app')
+    const written = run(['deploy', '--project', 'demo', '--platform', 'render', '--out', out, '--no-build'])
+    assert.equal(written.status, 0, written.stderr)
+    assert.match(written.stdout, /ok deployment files written/)
+    assert.match(readFileSync(join(out, 'render.yaml'), 'utf8'), /startCommand: npm run start/)
+
+    const bad = run(['deploy', '--project', 'demo', '--platform', 'unknown', '--dry-run'])
+    assert.equal(bad.status, 2)
+    assert.match(bad.stderr, /Unknown deploy platform/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('verify checks examples across both supported targets', () => {
   const res = run(['verify', '--examples', 'intentstack/examples', '--targets', 'web_ts_minimal,next_shadcn'])
   assert.equal(res.status, 0, res.stderr)
