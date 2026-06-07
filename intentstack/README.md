@@ -72,7 +72,8 @@ changes instead of rewriting `0000_init.sql`.
 - `split --write` migrates a monolith intent into modular files.
 - `graph --html` shows module source files and ownership for modular projects.
 - `editor` exports the same visual graph plus Patch Builder as an explicit visual editing entrypoint.
-- Served editor mode supports drag/drop section reorder through generated `section.move` patches.
+- Served editor mode supports drag/drop section reorder through generated `section.move` patches and
+  a live page preview rendered directly from the current intent.
 - Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
 - Generated apps export request spans to an OTLP/HTTP OpenTelemetry collector when
   `OTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` is set.

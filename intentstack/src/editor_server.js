@@ -7,7 +7,7 @@ import { normalize } from './normalize.js'
 import { validate } from './validate.js'
 import { buildGraph } from './graph.js'
 import { applyPatch } from './patch.js'
-import { renderGraphHtml } from './visual_graph.js'
+import { renderGraphHtml, renderPreviewHtml } from './visual_graph.js'
 
 export function createEditorServer({ projectDir, cfg = {}, outDir = null, targetOverride = null } = {}) {
   const root = resolve(projectDir || '.')
@@ -16,6 +16,16 @@ export function createEditorServer({ projectDir, cfg = {}, outDir = null, target
   async function loadState() {
     const { intentPath, ast } = await loadIntentProject(root, cfg, { targetOverride })
     return stateFromAst({ intentPath, ast, projectDir: root, outDir: outputDir })
+  }
+
+  async function loadPreviewState() {
+    const { ast } = await loadIntentProject(root, cfg, { targetOverride })
+    const coreAst = normalize(ast)
+    const diagnostics = validate(coreAst, { projectDir: root, outDir: outputDir })
+    return {
+      diagnostics,
+      graph: diagnostics.hasErrors() ? null : buildGraph(coreAst),
+    }
   }
 
   const server = createServer(async (req, res) => {
@@ -28,6 +38,15 @@ export function createEditorServer({ projectDir, cfg = {}, outDir = null, target
       }
       if (req.method === 'GET' && url.pathname === '/api/state') {
         return sendJson(res, await loadState())
+      }
+      if (req.method === 'GET' && url.pathname === '/api/preview') {
+        const state = await loadPreviewState()
+        if (state.diagnostics.hasErrors()) return sendHtml(res, diagnosticsHtml({
+          diagnostics: {
+            errors: state.diagnostics.errors,
+          },
+        }), 400)
+        return sendHtml(res, renderPreviewHtml(state.graph, { page: url.searchParams.get('page') }))
       }
       if (req.method === 'POST' && url.pathname === '/api/apply') {
         const body = await readBody(req)

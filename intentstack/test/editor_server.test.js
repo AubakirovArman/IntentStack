@@ -38,10 +38,18 @@ pages:
     assert.match(html, /Drag sections within a page/)
     assert.match(html, /data-section-move="true"/)
     assert.match(html, /data-section-id="hero"/)
+    assert.match(html, /Live Preview/)
+    assert.match(html, /id="page-preview"/)
+    assert.match(html, /\/api\/preview\?page=home/)
 
     const state = await fetch(`${base}/api/state`).then((res) => res.json())
     assert.equal(state.ok, true)
     assert.equal(state.graph.project.id, 'editor_app')
+
+    const preview = await fetch(`${base}/api/preview?page=home`).then((res) => res.text())
+    assert.match(preview, /IntentStack page preview/)
+    assert.match(preview, /<h1>Home<\/h1>/)
+    assert.match(preview, /First feature/)
 
     const applied = await fetch(`${base}/api/apply`, {
       method: 'POST',
@@ -56,6 +64,23 @@ patch:
     }).then((res) => res.json())
     assert.equal(applied.ok, true)
     assert.match(readFileSync(intentPath, 'utf8'), /Edited App/)
+
+    const previewPatch = await fetch(`${base}/api/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patch: `version: 0.1
+patch:
+  - op: text.set
+    target: page.home.section.hero.title
+    value: Updated Home
+`,
+      }),
+    }).then((res) => res.json())
+    assert.equal(previewPatch.ok, true)
+
+    const updatedPreview = await fetch(`${base}/api/preview?page=home`).then((res) => res.text())
+    assert.match(updatedPreview, /<h1>Updated Home<\/h1>/)
 
     const moved = await fetch(`${base}/api/apply`, {
       method: 'POST',
