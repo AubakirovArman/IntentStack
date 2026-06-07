@@ -22,6 +22,7 @@ import { formatOpenApi, generateOpenApi, openApiFormat } from './openapi.js'
 import { generateTestFiles } from './testgen.js'
 import { deploymentPlan } from './deploy.js'
 import { getThemePack, listThemePacks } from './themes.js'
+import { collaborationReport, formatCollabReport } from './collab.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -392,6 +393,16 @@ async function main() {
     return
   }
 
+  if (cmd === 'collab') {
+    const { ast } = await loadAst(projectDir, cfg)
+    const graph = buildGraph(normalize(ast))
+    const data = collaborationReport(graph, projectDir, { base: flag('base', 'HEAD') })
+    if (args.includes('--json')) console.log(JSON.stringify(data, null, 2))
+    else console.log('\n' + formatCollabReport(data))
+    if (args.includes('--strict') && data.findings.length > 0) process.exit(1)
+    return
+  }
+
   if (cmd === 'editor') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -709,6 +720,7 @@ function help() {
     '  intentstack explain page.<id>.section.<id>                      show how a node compiles',
     '  intentstack doctor  [--project DIR]                             validate environment and plan',
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
+    '  intentstack collab  [--project DIR] [--base REF] [--json]       inspect git/module owner changes',
     '  intentstack editor  [--project DIR] [--out FILE]                 export visual patch editor',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',

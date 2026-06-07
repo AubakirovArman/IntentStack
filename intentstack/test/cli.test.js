@@ -435,6 +435,41 @@ test('graph HTML renders module graph for modular projects', () => {
   }
 })
 
+test('collab maps git changes to modular intent owners', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-collab-'))
+  try {
+    const created = run(['new', dir, '--name', 'Collab App'])
+    assert.equal(created.status, 0, created.stderr)
+    assert.equal(spawnSync('git', ['init'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['config', 'user.email', 'agent@example.com'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['config', 'user.name', 'IntentStack Agent'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['add', '.'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['commit', '-m', 'init'], { cwd: dir, encoding: 'utf8' }).status, 0)
+
+    const navigation = join(dir, 'intent/shared/navigation.yaml')
+    writeFileSync(navigation, readFileSync(navigation, 'utf8').replace('Home', 'Start'))
+    mkdirSync(join(dir, 'intent/frontend/unused'), { recursive: true })
+    writeFileSync(join(dir, 'intent/frontend/unused/orphan.yaml'), 'page:\n  id: orphan\n  path: /orphan\n')
+
+    const res = run(['collab', '--project', dir, '--json'])
+    assert.equal(res.status, 0, res.stderr)
+    const data = JSON.parse(res.stdout)
+    assert.equal(data.status, 'warn')
+    assert.ok(data.git.changed_files.some((file) => /intent\/shared\/navigation\.yaml$/.test(file)))
+    assert.ok(data.owners_changed.some((owner) => owner.kind === 'navigation' && owner.id === 'navigation'))
+    assert.ok(data.findings.some((finding) => finding.code === 'COLLAB_UNKNOWN_INTENT_FILE'))
+
+    const text = run(['collab', '--project', dir])
+    assert.equal(text.status, 0, text.stderr)
+    assert.match(text.stdout, /Changed owners:/)
+
+    const strict = run(['collab', '--project', dir, '--strict'])
+    assert.equal(strict.status, 1)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('editor command exports the visual patch editor', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-editor-'))
   try {
