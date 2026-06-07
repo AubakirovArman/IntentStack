@@ -86,14 +86,14 @@ The Core IR and the shared data-model codegen (`emit/shared/datamodel.js`) are r
 ## Status / scope (v0.1)
 
 Implemented: `new`, `check`, `build`, `plan`, `diff`, `apply`, `explain`, `doctor`,
-`migrate`, `list_capabilities`, `schema`, `graph`, `collab`, `suggest`, `editor`, `openapi`, `testgen`, `deploy`, `themes`, `marketplace`, `stats`, `verify`; two target adapters;
+`migrate`, `list_capabilities`, `schema`, `graph`, `collab`, `suggest`, `voice`, `editor`, `openapi`, `testgen`, `deploy`, `themes`, `marketplace`, `stats`, `verify`; two target adapters;
 entities -> Drizzle schema + SQL migration manifest + explicit migration runner + zod validators; record actions -> Hono routes /
 Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, `hero`, `card_grid`, `stats`,
 `pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; derived API clients; inline
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; workflow/integration metadata and
-webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; visual editor export; context-aware patch suggestions; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
+webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; visual editor export; context-aware patch suggestions; voice/text-to-patch commands; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
 
 Still partial: Rust compiler core, production sessions/login, durable workflow jobs,
 provider-specific integration clients and a visual editor.

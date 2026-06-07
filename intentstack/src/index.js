@@ -25,6 +25,7 @@ import { getThemePack, listThemePacks } from './themes.js'
 import { collaborationReport, formatCollabReport } from './collab.js'
 import { loadConfiguredPlugins } from './plugins.js'
 import { intentSuggestions } from './suggestions.js'
+import { voiceToPatch } from './voice_intent.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -429,6 +430,20 @@ async function main() {
     return
   }
 
+  if (cmd === 'voice') {
+    const utterance = flag('text', args.slice(1).filter((item) => !item.startsWith('--')).join(' '))
+    const { ast } = await loadAst(projectDir, cfg)
+    const graph = buildGraph(normalize(ast))
+    const data = voiceToPatch(graph, utterance)
+    if (args.includes('--json')) console.log(JSON.stringify(data, null, 2))
+    else {
+      console.log(`\nIntentStack voice - ${data.summary}\n`)
+      console.log(data.yaml)
+    }
+    if (data.patch.length === 0) process.exitCode = 1
+    return
+  }
+
   if (cmd === 'editor') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -748,6 +763,7 @@ function help() {
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
     '  intentstack collab  [--project DIR] [--base REF] [--json]       inspect git/module owner changes',
     '  intentstack suggest [--project DIR] [--json] [--limit N]         suggest semantic patch templates',
+    '  intentstack voice   "add pricing section" [--json]              convert voice/text intent to patch',
     '  intentstack editor  [--project DIR] [--out FILE]                 export visual patch editor',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',

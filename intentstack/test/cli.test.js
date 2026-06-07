@@ -597,6 +597,55 @@ pages:
   }
 })
 
+test('voice command converts text intents to valid patch YAML', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-voice-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: voice_app
+  name: Voice App
+  target: web_ts_minimal
+entities:
+  - id: Lead
+    fields:
+      - id: name
+        type: string
+actions:
+  - id: list_leads
+    type: list_records
+    entity: Lead
+pages:
+  - id: home
+    path: /
+    sections:
+      - id: hero
+        type: hero
+        title: Home
+`)
+    const pricing = run(['voice', 'add pricing section', '--project', dir, '--json'])
+    assert.equal(pricing.status, 0, pricing.stderr)
+    const pricingData = JSON.parse(pricing.stdout)
+    assert.equal(pricingData.patch[0].op, 'section.add')
+    assert.equal(pricingData.patch[0].section.type, 'pricing_cards')
+    const patch = join(dir, 'voice.patch.yaml')
+    writeFileSync(patch, pricingData.yaml)
+    const applied = run(['apply', patch, '--project', dir])
+    assert.equal(applied.status, 0, applied.stderr)
+
+    const field = run(['voice', '--project', dir, '--text', 'add email to Lead', '--json'])
+    assert.equal(field.status, 0, field.stderr)
+    const fieldData = JSON.parse(field.stdout)
+    assert.equal(fieldData.patch[0].op, 'entity.field.add')
+    assert.equal(fieldData.patch[0].field.id, 'email')
+
+    const unknown = run(['voice', '--project', dir, '--text', 'sing a song'])
+    assert.equal(unknown.status, 1)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('apply --write records patch history used by graph HTML', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-history-'))
   try {
