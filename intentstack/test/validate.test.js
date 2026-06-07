@@ -202,7 +202,7 @@ test('validates multi-tenant configuration', () => {
 test('validates project database driver configuration', () => {
   const valid = validate({
     version: '0.1',
-    project: { id: 'db_app', target: 'web_ts_minimal', database: { driver: 'sqlite' } },
+    project: { id: 'db_app', target: 'web_ts_minimal', database: { driver: 'postgres' } },
     pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
   })
   assert.equal(valid.hasErrors(), false, valid.format())

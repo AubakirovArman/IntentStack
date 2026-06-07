@@ -44,4 +44,7 @@ Generated apps emit trace context headers, structured request logs, health/metri
 and optional OTLP/HTTP OpenTelemetry span export when `OTEL_EXPORTER_OTLP_ENDPOINT` or
 `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` is set.
 
+Database generation is selected with `project.database.driver`. Supported drivers are `sqlite`
+and `postgres`; both share the migration manifest/checksum contract.
+
 Generated zones are target-owned. Do not hand-edit files under managed zones.

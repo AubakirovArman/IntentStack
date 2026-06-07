@@ -217,6 +217,30 @@ test('multi-tenant apps scope generated schema, APIs and clients for both target
   assert.match(nextFiles['lib/api/client.ts'], /tenant_id=/)
 })
 
+test('postgres database driver emits pg schema, client, migrations and deps', () => {
+  const files = planFiles(buildGraph({
+    version: '0.1',
+    project: { id: 'pg_app', target: 'web_ts_minimal', database: { driver: 'postgres' } },
+    entities: [{ id: 'Lead', table: 'leads', fields: [{ id: 'name', type: 'string', required: true }, { id: 'score', type: 'number' }] }],
+    actions: [{ id: 'list_leads', type: 'list_records', entity: 'Lead' }],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  }))
+  const pkg = JSON.parse(files['package.json'])
+  assert.equal(pkg.dependencies.postgres, '^3.4.5')
+  assert.equal(pkg.dependencies['drizzle-orm'], '^0.36.4')
+  assert.match(files['server/generated/db/schema.ts'], /pgTable/)
+  assert.match(files['server/generated/db/schema.ts'], /serial\('id'\)\.primaryKey\(\)/)
+  assert.match(files['server/generated/db/schema.ts'], /doublePrecision\('score'\)/)
+  assert.match(files['server/generated/db/client.ts'], /drizzle-orm\/postgres-js/)
+  assert.match(files['server/generated/db/client.ts'], /postgres\(url, \{ max: 1 \}\)/)
+  assert.match(files['server/generated/db/client.ts'], /client\.unsafe\(statement\)/)
+  assert.match(files['migrations/0000_init.sql'], /id serial PRIMARY KEY/)
+  assert.match(files['migrations/0000_init.sql'], /score double precision/)
+  assert.match(files['.env.example'], /DATABASE_URL=postgres/)
+  const manifest = JSON.parse(files['migrations/manifest.json'])
+  assert.equal(manifest.driver, 'postgres')
+})
+
 function docsIntent(target) {
   return {
     version: '0.1',
