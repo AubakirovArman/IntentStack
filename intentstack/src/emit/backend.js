@@ -39,18 +39,68 @@ function indexTs(imports, mounts) {
   return BANNER_TS + `import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { randomUUID } from 'node:crypto'
 import { migrate } from './generated/db/client'
 ${imports.join('\n')}
 
 const app = new Hono()
 app.use('/api/*', cors({ origin: (origin) => origin || '*', credentials: true }))
+app.use('/api/*', async (c, next) => {
+  const requestId = c.req.header('x-request-id') || randomUUID()
+  const correlationId = c.req.header('x-correlation-id') || requestId
+  const startedAt = Date.now()
+  c.header('X-Request-Id', requestId)
+  c.header('X-Correlation-Id', correlationId)
+  try {
+    await next()
+  } finally {
+    console.log(JSON.stringify({
+      level: 'info',
+      type: 'http_request',
+      request_id: requestId,
+      correlation_id: correlationId,
+      method: c.req.method,
+      path: new URL(c.req.url).pathname,
+      status: c.res.status,
+      duration_ms: Date.now() - startedAt,
+    }))
+  }
+})
+app.onError((err, c) => {
+  const requestId = c.req.header('x-request-id') || randomUUID()
+  const correlationId = c.req.header('x-correlation-id') || requestId
+  console.error(JSON.stringify({
+    level: 'error',
+    type: 'http_error',
+    request_id: requestId,
+    correlation_id: correlationId,
+    method: c.req.method,
+    path: new URL(c.req.url).pathname,
+    message: err.message,
+  }))
+  return c.json({ error: 'internal_error', request_id: requestId, correlation_id: correlationId }, 500)
+})
 app.get('/api/health', (c) => c.json({ ok: true }))
 ${mounts.join('\n')}
 
 const port = Number(process.env.PORT ?? 8787)
 await migrate()
-serve({ fetch: app.fetch, port })
+const server = serve({ fetch: app.fetch, port })
 console.log(\`[intentstack] API listening on http://localhost:\${port}\`)
+
+function shutdown(signal: NodeJS.Signals) {
+  console.log(JSON.stringify({ level: 'info', type: 'shutdown', signal }))
+  server.close((err) => {
+    if (err) {
+      console.error(JSON.stringify({ level: 'error', type: 'shutdown_error', message: err.message }))
+      process.exit(1)
+    }
+    process.exit(0)
+  })
+}
+
+process.once('SIGINT', shutdown)
+process.once('SIGTERM', shutdown)
 `
 }
 

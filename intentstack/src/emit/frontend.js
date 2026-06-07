@@ -12,6 +12,7 @@ export function emitFrontend(graph) {
 
   files['src/generated/styles/theme.css'] = themeCss()
   files['src/generated/api/client.ts'] = clientTs(graph)
+  files['src/generated/ErrorBoundary.tsx'] = errorBoundaryTsx()
   files['src/vite-env.d.ts'] = `/// <reference types="vite/client" />\n`
   if (hasPageAuth(graph)) files['src/generated/auth.tsx'] = reactAuthTs(graph, BANNER_TS)
 
@@ -742,15 +743,59 @@ function mainTsx() {
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AppRoutes } from './routes'
+import { ErrorBoundary } from './generated/ErrorBoundary'
 import './generated/styles/theme.css'
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>,
 )
+`
+}
+
+function errorBoundaryTsx() {
+  return BANNER_TS + `import { Component } from 'react'
+import type { ErrorInfo, ReactNode } from 'react'
+
+type Props = { children: ReactNode }
+type State = { error: Error | null }
+
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(JSON.stringify({
+      level: 'error',
+      type: 'react_error_boundary',
+      message: error.message,
+      component_stack: errorInfo.componentStack,
+    }))
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children
+    return (
+      <main className="min-h-screen bg-base-100 p-8 text-base-content">
+        <div className="mx-auto max-w-xl rounded-lg border border-base-200 bg-base-100 p-6 shadow-sm">
+          <h1 className="text-xl font-semibold">Something went wrong</h1>
+          <p className="mt-2 opacity-70">The page could not render. Check the console or server logs for the request id.</p>
+          <button type="button" className="btn btn-primary mt-4" onClick={() => window.location.reload()}>
+            Reload
+          </button>
+        </div>
+      </main>
+    )
+  }
+}
 `
 }
 

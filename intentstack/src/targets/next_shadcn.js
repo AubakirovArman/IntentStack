@@ -39,6 +39,8 @@ function projectFiles(graph) {
     'postcss.config.mjs': 'export default {\n  plugins: {\n    tailwindcss: {},\n    autoprefixer: {},\n  },\n}\n',
     'tailwind.config.ts': tailwindConfig(),
     'app/globals.css': globalsCss(graph.theme),
+    'app/error.tsx': errorPageTsx(),
+    'middleware.ts': middlewareTs(),
     'components.json': componentsJson(),
     '.gitignore': ['node_modules', '.next', '*.db', 'data.db', '.env'].join('\n') + '\n',
     '.env.example': envExample(graph, { useAuth }),
@@ -98,6 +100,62 @@ function envExample(graph, opts = {}) {
 
 function passwordEnvName(value) {
   return typeof value === 'string' && value.startsWith('env:') ? value.slice(4) : null
+}
+
+function middlewareTs() {
+  return BANNER + `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function middleware(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') ?? crypto.randomUUID()
+  const correlationId = req.headers.get('x-correlation-id') ?? requestId
+  const res = NextResponse.next()
+  res.headers.set('X-Request-Id', requestId)
+  res.headers.set('X-Correlation-Id', correlationId)
+  console.log(JSON.stringify({
+    level: 'info',
+    type: 'http_request',
+    request_id: requestId,
+    correlation_id: correlationId,
+    method: req.method,
+    path: req.nextUrl.pathname,
+  }))
+  return res
+}
+
+export const config = {
+  matcher: ['/api/:path*'],
+}
+`
+}
+
+function errorPageTsx() {
+  return BANNER + `'use client'
+import { useEffect } from 'react'
+
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    console.error(JSON.stringify({
+      level: 'error',
+      type: 'react_error_boundary',
+      message: error.message,
+      digest: error.digest ?? null,
+    }))
+  }, [error])
+
+  return (
+    <main className="min-h-screen bg-background p-8 text-foreground">
+      <div className="mx-auto max-w-xl rounded-lg border bg-card p-6 shadow-sm">
+        <h1 className="text-xl font-semibold">Something went wrong</h1>
+        <p className="mt-2 text-muted-foreground">The page could not render. Check logs for the request id.</p>
+        <button type="button" className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" onClick={reset}>
+          Try again
+        </button>
+      </div>
+    </main>
+  )
+}
+`
 }
 
 function tsconfig() {
