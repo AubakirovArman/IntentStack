@@ -2,6 +2,7 @@ import { pascal } from '../../emit/util.js'
 import { schemaImports, schemaBody, migrationSql, migrationManifest, validatorBody, entityClientNeeds } from '../../emit/shared/datamodel.js'
 import { dbDriver } from '../../emit/shared/db_driver.js'
 import { hasActionAuth, hasPageAuth, integrationsTs, requestAuthTs, workflowsTs } from '../../emit/shared/modules.js'
+import { otelTs } from '../../emit/shared/observability.js'
 import { tenancyConfig } from '../../emit/shared/tenancy.js'
 import { BANNER } from './constants.js'
 
@@ -29,6 +30,7 @@ runIntentStackMigrations()
 `
   files[driver.migrationFile] = migrationSql(graph)
   files[driver.manifestFile] = migrationManifest(graph)
+  files['lib/otel.ts'] = otelTs(graph, BANNER)
   for (const e of graph.entities) {
     files[`lib/validators/${e.id.toLowerCase()}.ts`] = BANNER + validatorBody(e)
   }

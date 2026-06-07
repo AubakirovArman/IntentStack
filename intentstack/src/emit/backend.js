@@ -2,6 +2,7 @@
 import { BANNER_TS } from './util.js'
 import { ENTITY_ACTIONS } from '../registry.js'
 import { hasActionAuth, hasPageAuth, honoAuthTs, integrationsTs, isActivePolicy, roleLiteral, workflowsTs } from './shared/modules.js'
+import { otelTs } from './shared/observability.js'
 import { tenancyConfig } from './shared/tenancy.js'
 
 export function emitBackend(graph) {
@@ -33,6 +34,7 @@ export function emitBackend(graph) {
   if (useAuth) files['server/generated/auth.ts'] = honoAuthTs(graph, BANNER_TS)
   if (useWorkflows) files['server/generated/workflows.ts'] = workflowsTs(graph, BANNER_TS)
   if ((graph.integrations || []).length > 0) files['server/generated/integrations.ts'] = integrationsTs(graph, BANNER_TS)
+  files['server/generated/otel.ts'] = otelTs(graph, BANNER_TS)
   files['server/index.ts'] = indexTs(imports, mounts)
   return files
 }
@@ -43,6 +45,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { randomUUID } from 'node:crypto'
 import { migrate } from './generated/db/client'
+import { exportSpan, nowNanos } from './generated/otel'
 ${imports.join('\n')}
 
 const metrics = {
@@ -63,6 +66,7 @@ app.use('/api/*', async (c, next) => {
   const traceId = traceIdFromHeader(c.req.header('traceparent')) || newTraceId()
   const spanId = newSpanId()
   const startedAt = Date.now()
+  const startNanos = nowNanos()
   c.header('X-Request-Id', requestId)
   c.header('X-Correlation-Id', correlationId)
   c.header('X-Trace-Id', traceId)
@@ -87,6 +91,20 @@ app.use('/api/*', async (c, next) => {
       status: c.res.status,
       duration_ms: duration,
     }))
+    void exportSpan({
+      name: \`\${c.req.method} \${path}\`,
+      traceId,
+      spanId,
+      startTimeUnixNano: startNanos,
+      endTimeUnixNano: nowNanos(),
+      attributes: {
+        'http.request.method': c.req.method,
+        'url.path': path,
+        'http.response.status_code': c.res.status,
+        'intentstack.request_id': requestId,
+        'intentstack.correlation_id': correlationId,
+      },
+    })
   }
 })
 app.onError((err, c) => {

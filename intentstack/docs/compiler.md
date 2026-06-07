@@ -32,4 +32,8 @@ Current commands:
 `subscribe_records` actions generate server-sent event streams at `/api/<table>/stream`
 and matching API client helpers.
 
+Generated apps emit trace context headers, structured request logs, health/metrics endpoints,
+and optional OTLP/HTTP OpenTelemetry span export when `OTEL_EXPORTER_OTLP_ENDPOINT` or
+`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` is set.
+
 Generated zones are target-owned. Do not hand-edit files under managed zones.

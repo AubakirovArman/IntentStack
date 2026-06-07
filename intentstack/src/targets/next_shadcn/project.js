@@ -60,6 +60,11 @@ function packageJson(id, opts = {}) {
 function envExample(graph, opts = {}) {
   const lines = [
     ...opts.driver.envExampleLines(graph),
+    '# OpenTelemetry OTLP/HTTP trace export. Leave unset to disable.',
+    '# OTEL_SERVICE_NAME=intentstack-generated',
+    '# OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318',
+    '# OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces',
+    '# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer token',
   ]
   if (opts.useAuth) {
     lines.push(
@@ -85,13 +90,15 @@ function passwordEnvName(value) {
 
 function middlewareTs() {
   return BANNER + `import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import type { NextFetchEvent, NextRequest } from 'next/server'
+import { exportSpan, nowNanos } from './lib/otel'
 
-export function middleware(req: NextRequest) {
+export function middleware(req: NextRequest, event: NextFetchEvent) {
   const requestId = req.headers.get('x-request-id') ?? crypto.randomUUID()
   const correlationId = req.headers.get('x-correlation-id') ?? requestId
   const traceId = traceIdFromHeader(req.headers.get('traceparent')) || newTraceId()
   const spanId = newSpanId()
+  const startNanos = nowNanos()
   const res = NextResponse.next()
   res.headers.set('Content-Security-Policy', contentSecurityPolicy())
   res.headers.set('X-Request-Id', requestId)
@@ -107,6 +114,20 @@ export function middleware(req: NextRequest) {
     span_id: spanId,
     method: req.method,
     path: req.nextUrl.pathname,
+  }))
+  event.waitUntil(exportSpan({
+    name: \`\${req.method} \${req.nextUrl.pathname}\`,
+    traceId,
+    spanId,
+    startTimeUnixNano: startNanos,
+    endTimeUnixNano: nowNanos(),
+    attributes: {
+      'http.request.method': req.method,
+      'url.path': req.nextUrl.pathname,
+      'http.response.status_code': 200,
+      'intentstack.request_id': requestId,
+      'intentstack.correlation_id': correlationId,
+    },
   }))
   return res
 }

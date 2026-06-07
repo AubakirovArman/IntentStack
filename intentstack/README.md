@@ -67,6 +67,8 @@ changes instead of rewriting `0000_init.sql`.
 - `graph --html` shows module source files and ownership for modular projects.
 - `editor` exports the same visual graph plus Patch Builder as an explicit visual editing entrypoint.
 - Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
+- Generated apps export request spans to an OTLP/HTTP OpenTelemetry collector when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` is set.
 - `subscribe_records` actions generate `/api/<table>/stream` server-sent event endpoints.
 - `themes` lists local theme packs and can apply one back into modular intent.
 - `marketplace` lists local targets, theme packs, and domain modules available in this compiler build.

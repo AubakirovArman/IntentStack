@@ -125,6 +125,12 @@ function envExample(graph, opts = {}) {
     'PORT=8787',
     ...opts.driver.envExampleLines(graph),
     '# VITE_API_URL=   # leave empty in dev (vite proxies /api)',
+    '',
+    '# OpenTelemetry OTLP/HTTP trace export. Leave unset to disable.',
+    '# OTEL_SERVICE_NAME=intentstack-generated',
+    '# OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318',
+    '# OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces',
+    '# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer token',
   ]
   if (opts.useAuth) {
     lines.push(
