@@ -1,0 +1,155 @@
+version: 0.1
+project:
+  id: voice_agent_site
+  name: VoiceAgent
+  target: web_ts_minimal
+theme:
+  preset: minimal
+  radius: md
+  density: comfortable
+  color: neutral
+entities:
+  - id: Lead
+    table: leads
+    fields:
+      - id: name
+        type: string
+        label: Name
+        required: true
+      - id: phone
+        type: string
+        label: Phone
+        required: true
+      - id: company
+        type: string
+        label: Company
+        required: false
+      - id: message
+        type: text
+        label: Message
+        required: false
+      - id: status
+        type: enum
+        values:
+          - new
+          - contacted
+          - closed
+        default: new
+      - id: email
+        type: string
+        label: Email
+        required: true
+actions:
+  - id: create_lead
+    type: create_record
+    entity: Lead
+  - id: list_leads
+    type: list_records
+    entity: Lead
+  - id: get_lead
+    type: get_record
+    entity: Lead
+  - id: update_lead
+    type: update_record
+    entity: Lead
+pages:
+  - id: home
+    path: /
+    layout: landing
+    sections:
+      - id: nav
+        type: navbar
+        logo: VoiceAgent
+        items:
+          - label: Features
+            href: '#features'
+          - label: Contact
+            href: '#lead_form'
+          - label: Pricing
+            href: '#pricing'
+      - id: hero
+        type: hero
+        variant: centered
+        title: AI voice agents that book your demos
+        subtitle: Automate calls, qualify leads, and reduce manual work.
+        actions:
+          - label: Book demo
+            kind: primary
+            target: '#lead_form'
+      - id: features
+        type: card_grid
+        title: What it does
+        columns: 3
+        items:
+          - title: Answers calls
+            text: Handles repetitive customer conversations.
+          - title: Qualifies leads
+            text: Collects contact details and intent automatically.
+          - title: Shows a dashboard
+            text: Tracks every request in one place.
+      - id: pricing
+        type: card_grid
+        title: Simple pricing
+        columns: 3
+        items:
+          - title: Starter
+            text: $19/mo - 100 calls
+          - title: Growth
+            text: $49/mo - 1000 calls
+          - title: Pro
+            text: Custom - unlimited calls
+      - id: lead_form
+        type: form
+        title: Request a demo
+        entity: Lead
+        fields:
+          - name
+          - phone
+          - company
+          - message
+          - email
+        submit:
+          action: create_lead
+          success_message: Thanks. We will contact you soon.
+      - id: footer
+        type: footer
+        text: © VoiceAgent. Built from one intent file.
+  - id: dashboard_leads
+    path: /dashboard/leads
+    layout: dashboard
+    title: Leads
+    sections:
+      - id: leads_table
+        type: table
+        entity: Lead
+        source:
+          action: list_leads
+        columns:
+          - name
+          - phone
+          - company
+          - status
+          - email
+        row_actions:
+          - type: detail
+          - type: edit
+  - id: dashboard_lead_detail
+    path: /dashboard/leads/:id
+    layout: dashboard
+    auth: reserved
+    title: Lead detail
+    sections:
+      - id: lead_detail
+        type: record_detail
+        entity: Lead
+        source:
+          action: get_lead
+        fields:
+          - name
+          - phone
+          - company
+          - message
+          - status
+          - email
+        update:
+          action: update_lead

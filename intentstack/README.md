@@ -1,0 +1,49 @@
+# IntentStack Compiler
+
+Reference implementation of the IntentStack v0.1 compiler.
+
+The compiler reads `intent/app.intent.yaml`, validates semantic intent, builds a target-neutral
+Core IR, and emits a generated fullstack app for a selected target.
+
+## Commands
+
+```bash
+node src/index.js new <dir> --target web_ts_minimal
+node src/index.js check --project <dir> --json
+node src/index.js build --project <dir>
+node src/index.js diff --project <dir> --verbose
+node src/index.js apply <patch.yaml> --project <dir> --write
+node src/index.js list_capabilities --json
+node src/index.js schema --out schema/intent.v0.1.schema.json
+node src/index.js graph --project <dir> --html graph.html
+node src/index.js stats --project <dir> --json
+node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
+node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
+node src/index.js docs --out docs-site
+```
+
+The Rust crate under `crates/intent_cli` is a CLI wrapper around this Node reference
+compiler. It is intentionally not a full Rust port yet.
+
+## Targets
+
+- `web_ts_minimal`: Vite + React + Tailwind/daisyUI, Hono API, Drizzle + SQLite.
+- `next_shadcn`: Next.js App Router + shadcn-style primitives, route handlers, Drizzle + SQLite.
+
+## Current UI Contract
+
+- Top-level `navigation` generates one shared nav component reused across pages.
+- `page.navigation: false` opts a page out of shared navigation.
+- `content` sections generate structured docs/content blocks: headings, paragraphs, lists and code.
+
+## Test Gates
+
+```bash
+npm test
+cargo test
+node ../intentstack/src/index.js check --project ../demo
+node ../intentstack/src/index.js build --project ../demo
+node ../intentstack/src/index.js build --project ../demo --target next_shadcn --out app-next
+```
+
+Generated apps should also pass `npm run typecheck` and `npm run build`.

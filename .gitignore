@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build outputs and caches
+dist/
+.next/
+target/
+coverage/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+.intentstack-workflows.ndjson
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

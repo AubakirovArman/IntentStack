@@ -1,0 +1,6 @@
+id: footer
+category: layout
+props:
+  - id: text
+    type: text
+targets: [web_ts_minimal, next_shadcn]

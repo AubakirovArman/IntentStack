@@ -1,0 +1,9 @@
+id: next_shadcn
+frontend: true
+backend: true
+database: true
+framework: next
+ui: shadcn
+components: [navbar, hero, card_grid, form, table, record_detail, footer, stats, pricing_cards, content, custom_component]
+actions: [create_record, list_records, get_record, update_record, delete_record, navigate, show_toast]
+field_types: [string, text, number, boolean, enum, datetime]

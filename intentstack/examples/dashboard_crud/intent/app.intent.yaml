@@ -1,0 +1,93 @@
+version: 0.1
+
+project:
+  id: dashboard_crud_example
+  name: Dashboard CRUD
+  target: web_ts_minimal
+
+theme:
+  preset: minimal
+  radius: md
+  density: comfortable
+  color: neutral
+
+entities:
+  - id: Lead
+    table: leads
+    fields:
+      - id: name
+        type: string
+        label: Name
+        required: true
+      - id: email
+        type: string
+        label: Email
+      - id: status
+        type: enum
+        values: [new, contacted, closed]
+        default: new
+
+actions:
+  - id: create_lead
+    type: create_record
+    entity: Lead
+  - id: list_leads
+    type: list_records
+    entity: Lead
+  - id: get_lead
+    type: get_record
+    entity: Lead
+  - id: update_lead
+    type: update_record
+    entity: Lead
+  - id: delete_lead
+    type: delete_record
+    entity: Lead
+
+pages:
+  - id: home
+    path: /
+    layout: landing
+    sections:
+      - id: hero
+        type: hero
+        title: Dashboard CRUD
+        subtitle: CRUD example generated from actions.
+      - id: lead_form
+        type: form
+        title: Add lead
+        entity: Lead
+        fields: [name, email]
+        submit:
+          action: create_lead
+          success_message: Lead added.
+  - id: dashboard_leads
+    path: /dashboard/leads
+    layout: dashboard
+    auth: reserved
+    title: Leads
+    sections:
+      - id: leads_table
+        type: table
+        entity: Lead
+        source:
+          action: list_leads
+        columns: [name, email, status]
+        row_actions:
+          - type: detail
+          - type: edit
+          - type: delete
+  - id: lead_detail
+    path: /dashboard/leads/:id
+    layout: dashboard
+    auth: reserved
+    title: Lead detail
+    sections:
+      - id: lead_detail_view
+        type: record_detail
+        entity: Lead
+        source:
+          action: get_lead
+        fields: [name, email, status]
+        update:
+          action: update_lead

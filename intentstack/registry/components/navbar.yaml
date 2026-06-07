@@ -1,0 +1,8 @@
+id: navbar
+category: layout
+props:
+  - id: logo
+    type: string
+  - id: items
+    type: array
+targets: [web_ts_minimal, next_shadcn]

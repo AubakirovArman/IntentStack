@@ -1,0 +1,7 @@
+id: content
+category: content
+description: Structured documentation/content section with headings, paragraphs, lists, and code blocks.
+props:
+  title: string
+  toc: boolean
+  blocks: array

@@ -1,0 +1,47 @@
+version: 0.1
+
+project:
+  id: simple_admin_example
+  name: Simple Admin
+  target: web_ts_minimal
+
+theme:
+  preset: minimal
+  radius: md
+  density: compact
+  color: neutral
+
+entities:
+  - id: Task
+    table: tasks
+    fields:
+      - id: title
+        type: string
+        label: Title
+        required: true
+      - id: done
+        type: boolean
+        label: Done
+        default: false
+
+actions:
+  - id: create_task
+    type: create_record
+    entity: Task
+  - id: list_tasks
+    type: list_records
+    entity: Task
+
+pages:
+  - id: dashboard_tasks
+    path: /dashboard/tasks
+    layout: dashboard
+    auth: reserved
+    title: Tasks
+    sections:
+      - id: tasks_table
+        type: table
+        entity: Task
+        source:
+          action: list_tasks
+        columns: [title, done]

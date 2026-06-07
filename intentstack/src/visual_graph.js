@@ -1,0 +1,97 @@
+const esc = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+
+function list(items, render) {
+  if (!items?.length) return '<p class="muted">None</p>'
+  return `<ul>${items.map(render).join('')}</ul>`
+}
+
+export function renderGraphHtml(graph, history = []) {
+  const sectionTargets = graph.pages.flatMap((page) =>
+    page.sections.map((section) => `page.${page.id}.section.${section.id}`))
+  const pages = list(graph.pages, (page) => `<li>
+    <strong>${esc(page.id)}</strong> <span class="pill">${esc(page.path)}</span>
+    ${list(page.sections, (section) => `<li><span>${esc(section.id)}</span> <span class="muted">${esc(section.type)}</span></li>`)}
+  </li>`)
+  const entities = list(graph.entities, (entity) => `<li>
+    <strong>${esc(entity.id)}</strong> <span class="muted">${esc(entity.table)}</span>
+    ${list(entity.fields, (field) => `<li>${esc(field)}</li>`)}
+  </li>`)
+  const actions = list(graph.actions, (action) => `<li><strong>${esc(action.id)}</strong> <span class="muted">${esc(action.type)} ${esc(action.entity)}</span></li>`)
+  const workflows = list(graph.workflows, (workflow) => `<li><strong>${esc(workflow.id)}</strong> <span class="muted">trigger: ${esc(workflow.trigger?.action)}</span></li>`)
+  const integrations = list(graph.integrations, (integration) => `<li><strong>${esc(integration.id)}</strong> <span class="muted">${esc(integration.type)}</span></li>`)
+  const patches = list(history.slice(-20).reverse(), (entry) => `<li>
+    <strong>${esc(entry.timestamp)}</strong>
+    <span class="muted">${esc(entry.patch)}</span>
+    ${list(entry.changes || [], (change) => `<li>${esc(change.op)}: ${esc(change.summary)}</li>`)}
+  </li>`)
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IntentStack Graph - ${esc(graph.project?.id)}</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; background: #f8fafc; color: #0f172a; }
+      header { padding: 32px; background: #ffffff; border-bottom: 1px solid #e2e8f0; }
+      main { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; padding: 24px; }
+      section { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; }
+      h1 { margin: 0 0 6px; font-size: 28px; }
+      h2 { margin: 0 0 12px; font-size: 17px; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      li { margin: 6px 0; }
+      .muted { color: #64748b; }
+      .pill { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 12px; }
+      input, textarea, select { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font: inherit; }
+      button { border: 0; border-radius: 6px; padding: 8px 12px; background: #0f172a; color: #fff; cursor: pointer; }
+      pre { overflow-x: auto; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; }
+      .form { display: grid; gap: 10px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>${esc(graph.project?.id)} <span class="pill">${esc(graph.project?.target)}</span></h1>
+      <div class="muted">${esc(graph.project?.name || 'IntentStack app')}</div>
+    </header>
+    <main>
+      <section><h2>Pages and Sections</h2>${pages}</section>
+      <section>
+        <h2>Patch Builder</h2>
+        <div class="form">
+          <label>Target section<select id="patch-target">${sectionTargets.map((target) => `<option value="${esc(target)}">${esc(target)}</option>`).join('')}</select></label>
+          <label>Property<input id="patch-prop" value="title" /></label>
+          <label>Value<textarea id="patch-value" rows="3"></textarea></label>
+          <button type="button" id="patch-copy">Copy patch</button>
+          <pre><code id="patch-output"></code></pre>
+        </div>
+      </section>
+      <section><h2>Entities</h2>${entities}</section>
+      <section><h2>Actions</h2>${actions}</section>
+      <section><h2>Workflows</h2>${workflows}</section>
+      <section><h2>Integrations</h2>${integrations}</section>
+      <section><h2>Patch History</h2>${patches}</section>
+    </main>
+    <script>
+      const target = document.getElementById('patch-target')
+      const prop = document.getElementById('patch-prop')
+      const value = document.getElementById('patch-value')
+      const output = document.getElementById('patch-output')
+      function updatePatch() {
+        const path = target.value + '.' + (prop.value || 'title')
+        output.textContent = 'version: 0.1\\npatch:\\n  - op: text.set\\n    target: ' + path + '\\n    value: ' + JSON.stringify(value.value)
+      }
+      target?.addEventListener('change', updatePatch)
+      prop?.addEventListener('input', updatePatch)
+      value?.addEventListener('input', updatePatch)
+      document.getElementById('patch-copy')?.addEventListener('click', () => navigator.clipboard?.writeText(output.textContent))
+      updatePatch()
+    </script>
+  </body>
+</html>
+`
+}

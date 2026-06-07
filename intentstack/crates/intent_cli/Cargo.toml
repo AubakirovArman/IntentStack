@@ -1,0 +1,8 @@
+[package]
+name = "intent_cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "intentstack"
+path = "src/main.rs"

@@ -1,0 +1,12 @@
+id: table
+category: app
+props:
+  - id: entity
+    type: entity_ref
+  - id: source.action
+    type: action_ref
+  - id: columns
+    type: field_ref_array
+  - id: row_actions
+    type: array
+targets: [web_ts_minimal, next_shadcn]

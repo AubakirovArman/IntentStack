@@ -1,0 +1,10 @@
+id: card_grid
+category: marketing
+props:
+  - id: title
+    type: string
+  - id: columns
+    type: number
+  - id: items
+    type: array
+targets: [web_ts_minimal, next_shadcn]

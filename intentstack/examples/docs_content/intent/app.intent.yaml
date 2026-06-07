@@ -1,0 +1,64 @@
+version: 0.1
+
+project:
+  id: docs_content_example
+  name: Docs Content Example
+  target: web_ts_minimal
+
+theme:
+  preset: minimal
+  radius: md
+  density: comfortable
+  color: neutral
+
+navigation:
+  logo: Docs Example
+  items:
+    - label: Home
+      href: /
+    - label: Docs
+      href: /docs
+
+pages:
+  - id: home
+    path: /
+    layout: landing
+    sections:
+      - id: hero
+        type: hero
+        title: Docs Content Example
+        subtitle: Shared navigation and structured documentation content.
+        actions:
+          - label: Read docs
+            kind: primary
+            target: /docs
+
+  - id: docs
+    path: /docs
+    layout: docs
+    sections:
+      - id: docs_content
+        type: content
+        title: Documentation
+        blocks:
+          - id: overview
+            type: heading
+            level: 2
+            text: Overview
+          - id: overview_text
+            type: paragraph
+            text: This page is generated from structured content blocks.
+          - id: workflow
+            type: heading
+            level: 2
+            text: Workflow
+          - id: workflow_steps
+            type: list
+            items:
+              - Write a semantic patch.
+              - Run intentstack check.
+              - Run intentstack build.
+          - id: command
+            type: code
+            language: bash
+            code: intentstack build --project .

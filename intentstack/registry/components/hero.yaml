@@ -1,0 +1,10 @@
+id: hero
+category: marketing
+props:
+  - id: title
+    type: string
+  - id: subtitle
+    type: text
+  - id: actions
+    type: array
+targets: [web_ts_minimal, next_shadcn]

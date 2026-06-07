@@ -1,0 +1,12 @@
+id: custom_component
+category: extension
+props:
+  - id: component
+    type: string
+  - id: source
+    type: file_path
+  - id: props
+    type: object
+  - id: props_schema
+    type: object
+targets: [web_ts_minimal, next_shadcn]

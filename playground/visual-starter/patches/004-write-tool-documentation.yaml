@@ -1,0 +1,166 @@
+version: 0.1
+patch:
+  - op: section.update
+    id: docs_content
+    title: IntentStack Documentation
+
+  - op: content.block.update
+    section: docs_content
+    block: overview
+    value:
+      text: What IntentStack is
+
+  - op: content.block.update
+    section: docs_content
+    block: overview_text
+    value:
+      text: IntentStack is an AI-native fullstack compiler. The application is described as intent in intent/app.intent.yaml, and the compiler generates framework code, routes, API handlers, database files, styles, and migrations.
+
+  - op: content.block.update
+    section: docs_content
+    block: generated
+    value:
+      text: What it can generate
+
+  - op: content.block.update
+    section: docs_content
+    block: generated_list
+    value:
+      items:
+        - Multi-page React/Vite applications for the web_ts_minimal target.
+        - Next.js App Router applications for the next_shadcn target.
+        - Shared navigation, landing sections, documentation content, forms, tables, record detail pages, stats, pricing cards, and custom component wrappers.
+        - CRUD APIs, Drizzle/SQLite schema, migrations, zod validators, and generated API clients.
+        - Auth, workflow, and integration scaffolding for the supported MVP contracts.
+
+  - op: content.block.update
+    section: docs_content
+    block: workflow
+    value:
+      text: Agent workflow
+
+  - op: content.block.update
+    section: docs_content
+    block: workflow_list
+    value:
+      items:
+        - Read the current intent before changing behavior.
+        - Express the next change as a semantic patch instead of editing generated code.
+        - Run intentstack apply as a dry run and inspect the semantic diff.
+        - Run intentstack check, then intentstack build.
+        - Verify the generated application with typecheck and production build.
+
+  - op: content.block.update
+    section: docs_content
+    block: command
+    value:
+      language: powershell
+      code: |
+        node ..\..\intentstack\src\index.js apply .\patches\004-write-tool-documentation.yaml --project .
+        node ..\..\intentstack\src\index.js check --project .
+        node ..\..\intentstack\src\index.js build --project .
+
+  - op: content.block.add
+    section: docs_content
+    after: command
+    block:
+      id: core_loop
+      type: heading
+      level: 2
+      text: Core compiler loop
+
+  - op: content.block.add
+    section: docs_content
+    after: core_loop
+    block:
+      id: core_loop_list
+      type: list
+      items:
+        - Parse the intent file.
+        - Validate schema, target capabilities, references, auth policies, and component contracts.
+        - Build a target-neutral Core IR.
+        - Plan generated files before writing them.
+        - Emit target-specific frontend, backend, database, and support files.
+
+  - op: content.block.add
+    section: docs_content
+    after: core_loop_list
+    block:
+      id: semantic_patches
+      type: heading
+      level: 2
+      text: Semantic patches
+
+  - op: content.block.add
+    section: docs_content
+    after: semantic_patches
+    block:
+      id: semantic_patches_text
+      type: paragraph
+      text: Patches are small machine-readable changes such as navigation.item.add, page.create, section.add, entity.field.add, and content.block.update. The compiler validates the result before writing it back to intent/app.intent.yaml.
+
+  - op: content.block.add
+    section: docs_content
+    after: semantic_patches_text
+    block:
+      id: targets
+      type: heading
+      level: 2
+      text: Targets
+
+  - op: content.block.add
+    section: docs_content
+    after: targets
+    block:
+      id: targets_list
+      type: list
+      items:
+        - web_ts_minimal emits Vite, React, Tailwind/daisyUI, Hono API, Drizzle, and SQLite.
+        - next_shadcn emits Next.js App Router, shadcn-style primitives, route handlers, Drizzle, and SQLite.
+        - The same intent can compile to both targets when each declared component and action is supported.
+
+  - op: content.block.add
+    section: docs_content
+    after: targets_list
+    block:
+      id: diagnostics
+      type: heading
+      level: 2
+      text: Diagnostics and safety
+
+  - op: content.block.add
+    section: docs_content
+    after: diagnostics
+    block:
+      id: diagnostics_list
+      type: list
+      items:
+        - Errors and warnings include code, severity, message, path, suggestion, and sometimes fix_hint.
+        - Unsupported fields, actions, components, routes, and references are rejected before generation.
+        - Generated zones are disposable; custom code belongs outside generated folders.
+        - diff, graph, stats, security, and verify commands help audit intent and output.
+
+  - op: content.block.add
+    section: docs_content
+    after: diagnostics_list
+    block:
+      id: current_limits
+      type: heading
+      level: 2
+      text: Current limits
+
+  - op: content.block.add
+    section: docs_content
+    after: current_limits
+    block:
+      id: current_limits_list
+      type: list
+      items:
+        - There is not yet a visual browser editor; editing is done through intent and patch files.
+        - "Content blocks are useful, but still basic: no nested rich text, links, callouts, or reusable snippets."
+        - Generated dependency versions still need an audit-hardening pass.
+        - Production auth, durable workflows, deployments, and provider-specific integrations need deeper hardening.
+
+  - op: section.update
+    id: docs_footer
+    text: IntentStack documentation generated from a semantic patch.

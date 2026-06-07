@@ -1,0 +1,10 @@
+id: stats
+category: marketing
+props:
+  - id: title
+    type: string
+  - id: stats
+    type: array
+  - id: items
+    type: array
+targets: [web_ts_minimal, next_shadcn]

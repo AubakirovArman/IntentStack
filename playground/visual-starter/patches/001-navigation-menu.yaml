@@ -1,0 +1,27 @@
+version: 0.1
+patch:
+  - op: navbar.item.remove
+    navbar: nav
+    label: Process
+
+  - op: navbar.item.remove
+    navbar: nav
+    label: Contact
+
+  - op: navbar.item.add
+    navbar: nav
+    item:
+      label: Home
+      href: "/"
+
+  - op: navbar.item.add
+    navbar: nav
+    item:
+      label: Process
+      href: "#process"
+
+  - op: navbar.item.add
+    navbar: nav
+    item:
+      label: Contact
+      href: "#footer"

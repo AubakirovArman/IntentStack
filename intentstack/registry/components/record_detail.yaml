@@ -1,0 +1,12 @@
+id: record_detail
+category: app
+props:
+  - id: entity
+    type: entity_ref
+  - id: source.action
+    type: action_ref
+  - id: fields
+    type: field_ref_array
+  - id: update.action
+    type: action_ref
+targets: [web_ts_minimal, next_shadcn]
