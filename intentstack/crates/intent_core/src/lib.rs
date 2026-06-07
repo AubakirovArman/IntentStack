@@ -1107,13 +1107,19 @@ fn plan_web_ts_minimal(graph: &AppGraph, planner: &mut EmitPlanner) {
             "validator",
         );
     }
-    for (entity_id, _types) in entity_action_types(graph) {
+    for (entity_id, types) in entity_action_types(graph) {
         let entity = graph.entities.iter().find(|entity| entity.id == entity_id);
         if let Some(entity) = entity {
             planner.add(
                 format!("server/generated/routes/{}.ts", entity.id.to_lowercase()),
                 "api_route",
             );
+            if types.contains("subscribe_records") {
+                planner.add(
+                    format!("server/generated/realtime/{}.ts", entity.id.to_lowercase()),
+                    "realtime",
+                );
+            }
         }
     }
     if has_global_navigation(graph) {
@@ -1779,6 +1785,9 @@ actions:
   - id: list_leads
     type: list_records
     entity: Lead
+  - id: subscribe_leads
+    type: subscribe_records
+    entity: Lead
 integrations:
   - id: notify
     type: webhook
@@ -1850,6 +1859,10 @@ pages:
             .files
             .iter()
             .any(|file| file.path == "server/generated/routes/lead.ts"));
+        assert!(web_plan
+            .files
+            .iter()
+            .any(|file| file.path == "server/generated/realtime/lead.ts"));
         assert!(web_plan
             .files
             .iter()

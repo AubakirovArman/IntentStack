@@ -19,6 +19,8 @@ export function emitBackend(graph) {
 
   const imports = []
   const mounts = []
+  const websocketImports = []
+  const websocketMounts = []
   if (useAuth) {
     imports.push(`import { authRoutes } from './generated/auth'`)
     mounts.push(`app.route('/api', authRoutes)`)
@@ -30,16 +32,22 @@ export function emitBackend(graph) {
     files[`server/generated/routes/${fname}.ts`] = routeTs(e, acts, { useAuth, useWorkflows, tenancy })
     imports.push(`import ${fname}Routes from './generated/routes/${fname}'`)
     mounts.push(`app.route('/api', ${fname}Routes)`)
+    if (acts.some((a) => a.type === 'subscribe_records')) {
+      const mountName = `mount${e.id}WebSocket`
+      files[`server/generated/realtime/${fname}.ts`] = websocketTs(e, { tenancy })
+      websocketImports.push(`import { ${mountName} } from './generated/realtime/${fname}'`)
+      websocketMounts.push(`${mountName}(server)`)
+    }
   }
   if (useAuth) files['server/generated/auth.ts'] = honoAuthTs(graph, BANNER_TS)
   if (useWorkflows) files['server/generated/workflows.ts'] = workflowsTs(graph, BANNER_TS)
   if ((graph.integrations || []).length > 0) files['server/generated/integrations.ts'] = integrationsTs(graph, BANNER_TS)
   files['server/generated/otel.ts'] = otelTs(graph, BANNER_TS)
-  files['server/index.ts'] = indexTs(imports, mounts)
+  files['server/index.ts'] = indexTs([...imports, ...websocketImports], mounts, websocketMounts)
   return files
 }
 
-function indexTs(imports, mounts) {
+function indexTs(imports, mounts, websocketMounts = []) {
   return BANNER_TS + `import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -134,6 +142,7 @@ ${mounts.join('\n')}
 const port = Number(process.env.PORT ?? 8787)
 await migrate()
 const server = serve({ fetch: app.fetch, port })
+${websocketMounts.join('\n')}
 console.log(\`[intentstack] API listening on http://localhost:\${port}\`)
 
 function newTraceId() {
@@ -270,6 +279,54 @@ ${tenantGuard(tenant, 'c')}  return streamSSE(c, async (stream) => {
 `
   out += `\nexport default r\n`
   return out
+}
+
+function websocketTs(entity, opts) {
+  const t = entity.id.toLowerCase()
+  const base = entity.table || t
+  const tenant = opts.tenancy
+  const tenantWhere = tenant ? `.where(eq(${t}.tenantId, tenant))` : ''
+  const mountName = `mount${entity.id}WebSocket`
+  return BANNER_TS + `import type { IncomingMessage, Server } from 'node:http'
+import { WebSocket, WebSocketServer } from 'ws'
+import { db } from '../db/client'
+import { ${t} } from '../db/schema'
+import { desc${tenant ? ', eq' : ''} } from 'drizzle-orm'
+
+export function ${mountName}(server: Server) {
+  const wss = new WebSocketServer({ noServer: true })
+  server.on('upgrade', (request, socket, head) => {
+    const url = new URL(request.url || '/', 'http://intentstack.local')
+    if (url.pathname !== '/api/${base}/ws') return
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request)
+    })
+  })
+  wss.on('connection', (ws, request) => {
+    const url = new URL(request.url || '/', 'http://intentstack.local')
+${tenant ? `    const tenant = readTenant(request, url)
+    if (!tenant) {
+      ws.close(1008, 'tenant_required')
+      return
+    }
+` : ''}    const send = async () => {
+      if (ws.readyState !== WebSocket.OPEN) return
+      const rows = await db.select().from(${t})${tenantWhere}.orderBy(desc(${t}.createdAt))
+      ws.send(JSON.stringify({ event: 'records', data: rows }))
+    }
+    const timer = setInterval(() => void send(), 2000)
+    ws.on('close', () => clearInterval(timer))
+    ws.on('error', () => clearInterval(timer))
+    void send()
+  })
+}
+${tenant ? `
+function readTenant(request: IncomingMessage, url: URL) {
+  const header = request.headers[${JSON.stringify(tenant.header.toLowerCase())}]
+  const value = Array.isArray(header) ? header[0] : header
+  return String(value || url.searchParams.get('tenant_id') || '').trim()
+}
+` : ''}`
 }
 
 function authGuard(action) {

@@ -7,9 +7,10 @@ export function emitProject(graph) {
   const id = (graph.project?.id || 'app').toLowerCase().replace(/[^a-z0-9-]/g, '-')
   const name = graph.project?.name || 'IntentStack App'
   const useAuth = hasActionAuth(graph.actions) || hasPageAuth(graph)
+  const useWebSockets = graph.actions.some((action) => action.type === 'subscribe_records')
   const driver = dbDriver(graph)
   return {
-    'package.json': packageJson(id, { useAuth, driver }),
+    'package.json': packageJson(id, { useAuth, useWebSockets, driver }),
     'tsconfig.json': tsconfig(),
     'vite.config.ts': viteConfig(),
     'tailwind.config.js': tailwindConfig(),
@@ -23,6 +24,8 @@ export function emitProject(graph) {
 function packageJson(id, opts = {}) {
   const authDeps = opts.useAuth ? { bcryptjs: '^2.4.3' } : {}
   const authDevDeps = opts.useAuth ? { '@types/bcryptjs': '^2.4.6' } : {}
+  const websocketDeps = opts.useWebSockets ? { ws: '^8.18.0' } : {}
+  const websocketDevDeps = opts.useWebSockets ? { '@types/ws': '^8.5.13' } : {}
   return JSON.stringify({
     name: `${id}-generated`,
     private: true,
@@ -45,12 +48,14 @@ function packageJson(id, opts = {}) {
       zod: '^3.23.8',
       ...opts.driver.packageDependencies,
       ...authDeps,
+      ...websocketDeps,
     },
     devDependencies: {
       '@types/node': '^22.10.1',
       '@types/react': '^18.3.12',
       '@types/react-dom': '^18.3.1',
       ...authDevDeps,
+      ...websocketDevDeps,
       '@vitejs/plugin-react': '^4.3.4',
       autoprefixer: '^10.4.20',
       concurrently: '^9.1.0',

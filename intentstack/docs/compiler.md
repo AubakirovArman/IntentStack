@@ -37,7 +37,8 @@ Rust core commands:
 `build --verify-install` runs `npm install` before generated `npm run build`.
 
 `subscribe_records` actions generate server-sent event streams at `/api/<table>/stream`
-and matching API client helpers.
+and matching API client helpers. The `web_ts_minimal` target also emits `/api/<table>/ws`
+WebSocket endpoints and `subscribe<Entity>Ws()` clients.
 
 Generated apps emit trace context headers, structured request logs, health/metrics endpoints,
 and optional OTLP/HTTP OpenTelemetry span export when `OTEL_EXPORTER_OTLP_ENDPOINT` or

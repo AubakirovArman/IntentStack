@@ -699,6 +699,13 @@ function tenantQuery() {
 function tenantQuery() { return '' }
 
 `}
+function websocketUrl(path: string) {
+  const origin = BASE || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8787')
+  const url = new URL(path, origin)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return url.toString()
+}
+
 `
   for (const [eid, types] of Object.entries(byEntity)) {
     const e = graph.getEntity(eid)
@@ -768,6 +775,16 @@ function tenantQuery() { return '' }
   })
   if (onError) source.addEventListener('error', onError)
   return () => source.close()
+}
+
+export function subscribe${P}Ws(onRecords: (rows: Array<Record<string, unknown>>) => void, onError?: (event: Event) => void) {
+  const socket = new WebSocket(websocketUrl(\`/api/${base}/ws\${tenantQuery()}\`))
+  socket.addEventListener('message', (event) => {
+    const json = JSON.parse(event.data)
+    if (json.event === 'records') onRecords((json.data ?? []) as Array<Record<string, unknown>>)
+  })
+  if (onError) socket.addEventListener('error', onError)
+  return () => socket.close()
 }
 
 `
