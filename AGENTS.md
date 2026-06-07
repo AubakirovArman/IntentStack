@@ -29,8 +29,8 @@ These are regenerated on every `intentstack build`. Hand-written code belongs in
    auth change.
 3. Make the smallest semantic change that satisfies the request.
 4. Run `intentstack check`.
-5. Run `intentstack build`.
-6. Run `npm run typecheck` or `npm run build` in the generated app.
+5. Run `intentstack build`; it normalizes, emits, formats, and runs generated `npm run build` when dependencies are installed.
+6. Run generated `npm run typecheck` as an extra gate when the change affects TypeScript contracts.
 
 ## Diagnostics
 

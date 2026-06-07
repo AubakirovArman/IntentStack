@@ -14,7 +14,7 @@ Status legend:
 4. Full patch command set: `done`. The PRD command surface is implemented and exposed through `patchOps()`/`list_capabilities`.
 5. UI component catalog: `done`. `navbar`, `hero`, `card_grid`, `pricing_cards`, `stats`, `form`, `table`, `record_detail`, `footer`, `custom_component` are supported.
 6. CRUD completeness: `done`. CRUD routes and clients are generated; dashboard row actions support detail/edit/delete, and dedicated dynamic record detail pages are generated for both targets.
-7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `stats`, `verify`, and `docs` exist.
+7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
 8. Generated/custom extension model: `done`. `custom_component` validates source/export, validates declared props schemas, and emits wrappers with typed props for both targets.
 9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff and examples x targets verify tests exist; `verify --npm-build` has passed the full npm install/build matrix for all examples and both targets.
 10. Docs and AI-agent protocol: `done`. Core docs exist, AGENTS/README are current, and `intentstack docs --out` generates a static documentation site.

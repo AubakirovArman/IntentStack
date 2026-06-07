@@ -5,12 +5,26 @@ export function AppNav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <span className="text-lg font-semibold">{"3D Visual"}</span>
         <nav className="flex gap-6 text-sm text-muted-foreground">
-          <a href="/" className="transition-colors hover:text-foreground">{"Home"}</a>
-          <a href="/#process" className="transition-colors hover:text-foreground">{"Process"}</a>
-          <a href="/docs" className="transition-colors hover:text-foreground">{"Docs"}</a>
-          <a href="/#footer" className="transition-colors hover:text-foreground">{"Contact"}</a>
+          <a href="/" className="transition-colors hover:text-foreground">
+            {"Home"}
+          </a>
+          <a
+            href="/#process"
+            className="transition-colors hover:text-foreground"
+          >
+            {"Process"}
+          </a>
+          <a href="/docs" className="transition-colors hover:text-foreground">
+            {"Docs"}
+          </a>
+          <a
+            href="/#footer"
+            className="transition-colors hover:text-foreground"
+          >
+            {"Contact"}
+          </a>
         </nav>
       </div>
     </header>
-  )
+  );
 }

@@ -4,5 +4,5 @@ export function DocsFooter() {
     <footer className="border-t bg-muted/30 py-8 text-center text-sm text-muted-foreground">
       <p>{"IntentStack documentation generated from a semantic patch."}</p>
     </footer>
-  )
+  );
 }

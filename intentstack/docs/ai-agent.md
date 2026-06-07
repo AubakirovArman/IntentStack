@@ -9,8 +9,8 @@ Default loop:
 3. Run `intentstack apply <patch> --project <dir>`.
 4. Run `intentstack check --project <dir>`.
 5. Run `intentstack diff --project <dir>`.
-6. Run `intentstack build --project <dir>`.
-7. Run generated app typecheck/build.
+6. Run `intentstack build --project <dir>`; it normalizes, emits, formats, and runs generated `npm run build` when dependencies are installed.
+7. Run generated app typecheck when TypeScript contracts changed.
 
 Rules:
 

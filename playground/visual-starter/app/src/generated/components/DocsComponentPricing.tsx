@@ -6,46 +6,48 @@ export function DocsComponentPricing() {
   return (
     <section id="docs_component_pricing" className="py-16 bg-base-200">
       <div className="max-w-6xl mx-auto px-4">
-        <h2 className="text-3xl font-semibold text-center mb-10">{"Live pricing_cards example"}</h2>
+        <h2 className="text-3xl font-semibold text-center mb-10">
+          {"Live pricing_cards example"}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
-          <div className="card-body">
-            <h3 className="card-title">{"Starter"}</h3>
-            <p className="text-3xl font-bold">{"from $300"}</p>
-            
-            <ul className="list-disc pl-5 text-sm opacity-80">
-              <li>{"One room or product"}</li>
-              <li>{"Two camera angles"}</li>
-              <li>{"Basic material pass"}</li>
-            </ul>
+          <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
+            <div className="card-body">
+              <h3 className="card-title">{"Starter"}</h3>
+              <p className="text-3xl font-bold">{"from $300"}</p>
+
+              <ul className="list-disc pl-5 text-sm opacity-80">
+                <li>{"One room or product"}</li>
+                <li>{"Two camera angles"}</li>
+                <li>{"Basic material pass"}</li>
+              </ul>
+            </div>
           </div>
-        </div>
-        <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
-          <div className="card-body">
-            <h3 className="card-title">{"Studio"}</h3>
-            <p className="text-3xl font-bold">{"from $900"}</p>
-            
-            <ul className="list-disc pl-5 text-sm opacity-80">
-              <li>{"Three scenes"}</li>
-              <li>{"Styled lighting"}</li>
-              <li>{"Revision pass"}</li>
-            </ul>
+          <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
+            <div className="card-body">
+              <h3 className="card-title">{"Studio"}</h3>
+              <p className="text-3xl font-bold">{"from $900"}</p>
+
+              <ul className="list-disc pl-5 text-sm opacity-80">
+                <li>{"Three scenes"}</li>
+                <li>{"Styled lighting"}</li>
+                <li>{"Revision pass"}</li>
+              </ul>
+            </div>
           </div>
-        </div>
-        <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
-          <div className="card-body">
-            <h3 className="card-title">{"Launch"}</h3>
-            <p className="text-3xl font-bold">{"custom"}</p>
-            
-            <ul className="list-disc pl-5 text-sm opacity-80">
-              <li>{"Landing page visuals"}</li>
-              <li>{"Batch export"}</li>
-              <li>{"Motion-ready frames"}</li>
-            </ul>
+          <div className="card bg-base-100 rounded-lg border border-base-200 shadow-sm">
+            <div className="card-body">
+              <h3 className="card-title">{"Launch"}</h3>
+              <p className="text-3xl font-bold">{"custom"}</p>
+
+              <ul className="list-disc pl-5 text-sm opacity-80">
+                <li>{"Landing page visuals"}</li>
+                <li>{"Batch export"}</li>
+                <li>{"Motion-ready frames"}</li>
+              </ul>
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,7 +1,10 @@
 // Build the Core IR / AppGraph from parsed intent (PRD §6.2).
 // This representation knows nothing about React, Hono, or Drizzle — only the domain.
 
+import { normalize } from './normalize.js'
+
 export function buildGraph(ast) {
+  ast = normalize(ast)
   const project = ast.project || {}
   const theme = ast.theme || {}
   const entities = ast.entities || []

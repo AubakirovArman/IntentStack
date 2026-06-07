@@ -2,8 +2,9 @@
 
 Reference implementation of the IntentStack v0.1 compiler.
 
-The compiler reads `intent/app.intent.yaml`, assembles included modules, validates semantic intent,
-builds a target-neutral Core IR, and emits a generated fullstack app for a selected target.
+The compiler reads `intent/app.intent.yaml`, assembles included modules, normalizes compact intent
+into Core IR shape, validates semantic intent, emits a generated fullstack app, formats generated
+files, and verifies the app for a selected target.
 
 ## Commands
 
@@ -11,7 +12,7 @@ builds a target-neutral Core IR, and emits a generated fullstack app for a selec
 node src/index.js new <dir> --target web_ts_minimal
 node src/index.js new <dir> --single-file   # legacy/export-style monolith
 node src/index.js check --project <dir> --json
-node src/index.js build --project <dir>
+node src/index.js build --project <dir>              # emit + format + npm run build when deps exist
 node src/index.js diff --project <dir> --verbose
 node src/index.js apply <patch.yaml> --project <dir> --write
 node src/index.js split --project <dir> --write
@@ -68,4 +69,5 @@ node ../intentstack/src/index.js build --project ../demo --target next_shadcn --
 node ../intentstack/src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 ```
 
-Generated apps should also pass `npm run typecheck` and `npm run build`.
+`intentstack build` runs generated `npm run build` automatically when `node_modules` exists. Run
+generated `npm run typecheck` as an additional local gate when needed.

@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // IntentStack v0.1 CLI — reference implementation.
-// Pipeline (PRD 17): load -> parse -> validate -> build graph -> plan -> emit -> report.
+// Pipeline (PRD 17): load -> parse -> normalize -> validate -> build graph -> plan -> emit -> format -> verify -> report.
 import { resolve, join, dirname } from 'node:path'
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { spawnSync } from 'node:child_process'
 import { parseIntentFile } from './parse.js'
 import { findIntent, loadIntentProject, writeIntentProject } from './intent_loader.js'
+import { normalize } from './normalize.js'
 import { validate } from './validate.js'
 import { buildGraph } from './graph.js'
 import { emit, getAdapter, planFiles } from './emit/index.js'
+import { formatGeneratedFiles, runNpm, verifyGeneratedApp } from './pipeline.js'
 import { applyPatch, patchOps } from './patch.js'
 import { FIELD_TYPES, TARGETS } from './registry.js'
 import { diffPlannedFiles, formatDiff } from './diff.js'
@@ -144,8 +145,9 @@ async function main() {
 
   if (cmd === 'split') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
+    const coreAst = normalize(ast)
     const outIntentDir = resolve(projectDir, flag('out-intent-dir', 'intent'))
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
     if (d.hasErrors()) {
       console.log(d.format())
       console.error('\nx split aborted - source intent is invalid.')
@@ -167,10 +169,12 @@ async function main() {
 
   if (cmd === 'check' || cmd === 'build') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
+    const coreAst = normalize(ast)
     const outDir = resolve(projectDir, flag('out', cfg.out || 'app'))
-    const d = validate(ast, { projectDir, outDir })
+    const d = validate(coreAst, { projectDir, outDir })
     console.log(`\nIntentStack ${cmd} - ${intentPath}`)
     console.log(`Target: ${ast?.project?.target ?? '(none)'}\n`)
+    console.log('Normalize: ok')
     console.log('Diagnostics:')
     console.log(d.format())
     if (args.includes('--json')) console.log('\nJSON diagnostics:\n' + JSON.stringify(d.toJSON(), null, 2))
@@ -182,9 +186,16 @@ async function main() {
       console.log(`\nok check passed (${d.warnings.length} warning(s)).`)
       return
     }
-    const graph = buildGraph(ast)
+    const graph = buildGraph(coreAst)
     const written = emit(graph, outDir)
-    report(written, outDir, d, ast)
+    const format = formatGeneratedFiles(outDir, written, { enabled: !args.includes('--no-format') })
+    const verify = verifyGeneratedApp(outDir, {
+      enabled: !args.includes('--no-verify'),
+      install: args.includes('--verify-install'),
+    })
+    report(written, outDir, d, coreAst, { format, verify })
+    if (format.some((row) => row.status === 'failed')) process.exit(1)
+    if (verify.status === 'failed') process.exit(1)
     return
   }
 
@@ -204,7 +215,8 @@ async function main() {
       if (c.before !== undefined) console.log(`  ~ ${c.summary}\n      old: ${JSON.stringify(c.before)}\n      new: ${JSON.stringify(c.after)}`)
       else console.log(`  + ${c.summary}`)
     }
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
     console.log('\nValidation of patched intent:')
     console.log(d.format())
     if (d.hasErrors()) { console.error(`\nx patch would introduce ${d.errors.length} error(s) - NOT written.`); process.exit(1) }
@@ -224,9 +236,10 @@ async function main() {
 
   if (cmd === 'plan') {
     const { ast } = await loadAst(projectDir, cfg)
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
     if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
-    const files = planFiles(buildGraph(ast))
+    const files = planFiles(buildGraph(coreAst))
     console.log('Planned files:')
     for (const f of Object.keys(files).sort()) console.log('  + ' + f)
     return
@@ -234,11 +247,12 @@ async function main() {
 
   if (cmd === 'diff') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
     if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
-    const graph = buildGraph(ast)
-    const files = planFiles(graph)
+    const graph = buildGraph(coreAst)
     const outDir = resolve(projectDir, flag('out', cfg.out || 'app'))
+    const files = formatPlannedForDiff(planFiles(graph), outDir)
     const adapter = getAdapter(graph)
     const diff = diffPlannedFiles(files, outDir, adapter.managedZones || [])
     console.log(`\nIntentStack diff - ${intentPath}`)
@@ -250,8 +264,9 @@ async function main() {
 
   if (cmd === 'doctor') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
-    const graph = buildGraph(ast)
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const graph = buildGraph(coreAst)
     console.log(`\nIntentStack doctor - ${projectDir}`)
     console.log(`Node: ${process.version}`)
     console.log(`Intent: ${intentPath}`)
@@ -269,9 +284,10 @@ async function main() {
 
   if (cmd === 'graph') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
     if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
-    const graph = buildGraph(ast)
+    const graph = buildGraph(coreAst)
     const data = graphSummary(graph)
     const htmlOut = flag('html', null)
     if (htmlOut) {
@@ -301,8 +317,9 @@ async function main() {
 
   if (cmd === 'stats') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
-    const graph = buildGraph(ast)
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const graph = buildGraph(coreAst)
     const data = statsSummary(graph, d, d.hasErrors() ? {} : planFiles(graph))
     const statsOut = flag('out-stats', flag('out-json', null))
     if (statsOut) {
@@ -326,8 +343,9 @@ async function main() {
 
   if (cmd === 'security') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
-    const d = validate(ast, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
-    const graph = buildGraph(ast)
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    const graph = buildGraph(coreAst)
     const data = securitySummary(graph, d)
     if (args.includes('--json')) console.log(JSON.stringify(data, null, 2))
     else {
@@ -354,7 +372,7 @@ async function main() {
 
   if (cmd === 'explain') {
     const { ast } = await loadAst(projectDir, cfg)
-    explain(ast, args[1])
+    explain(normalize(ast), args[1])
     return
   }
 
@@ -382,14 +400,15 @@ async function verifyExamples(examplesDir, targets, opts = {}) {
     for (const target of targets) {
       const nextAst = JSON.parse(JSON.stringify(ast))
       nextAst.project = { ...(nextAst.project || {}), target }
+      const coreAst = normalize(nextAst)
       const outDir = mkdtempSync(join(tmpdir(), 'intentstack-verify-'))
       try {
-        const d = validate(nextAst, { projectDir, outDir })
+        const d = validate(coreAst, { projectDir, outDir })
         if (d.hasErrors()) {
           rows.push({ example, target, ok: false, error: d.errors.map((e) => e.code).join(', ') })
           continue
         }
-        const written = emit(buildGraph(nextAst), outDir)
+        const written = emit(buildGraph(coreAst), outDir)
         if (opts.npmBuild) {
           const installed = runNpm(outDir, ['install'])
           if (installed.status !== 0) {
@@ -411,16 +430,6 @@ async function verifyExamples(examplesDir, targets, opts = {}) {
     }
   }
   return { rows, failures: rows.filter((row) => !row.ok).length }
-}
-
-function runNpm(cwd, args) {
-  const bin = process.platform === 'win32' ? 'cmd.exe' : 'npm'
-  const npmArgs = process.platform === 'win32' ? ['/d', '/s', '/c', 'npm', ...args] : args
-  const res = spawnSync(bin, npmArgs, { cwd, encoding: 'utf8', stdio: 'pipe' })
-  return {
-    status: res.status ?? 1,
-    error: (res.error?.message || res.stderr || res.stdout || '').trim().split(/\r?\n/).slice(-4).join(' '),
-  }
 }
 
 function patchHistoryPath(intentPath) {
@@ -450,12 +459,39 @@ function readPatchHistory(intentPath) {
     .filter(Boolean)
 }
 
-function report(written, outDir, d, ast) {
+function formatPlannedForDiff(files, outDir) {
+  const rels = Object.keys(files)
+  const tempDir = mkdtempSync(join(tmpdir(), 'intentstack-diff-'))
+  try {
+    for (const [rel, content] of Object.entries(files)) {
+      const abs = join(tempDir, rel)
+      mkdirSync(dirname(abs), { recursive: true })
+      writeFileSync(abs, content)
+    }
+    const rows = formatGeneratedFiles(tempDir, rels, { toolRoot: outDir })
+    if (rows.some((row) => row.status === 'failed')) return files
+    return Object.fromEntries(rels.map((rel) => [rel, readFileSync(join(tempDir, rel), 'utf8')]))
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true })
+  }
+}
+
+function report(written, outDir, d, ast, phases = {}) {
   const count = (pre) => written.filter((f) => f.startsWith(pre)).length
   console.log(`\nok Generated ${written.length} files into ${outDir}`)
   console.log(`   target: ${ast?.project?.target}`)
   console.log(`   frontend: ${count('src/') + count('app/') + count('components/')}   api: ${count('server/') + count('app/api/')}   lib: ${count('lib/')}   migrations: ${count('migrations/')}`)
   if (d.warnings.length) console.log(`   warnings: ${d.warnings.length} (non-blocking)`)
+  if (phases.format) {
+    for (const row of phases.format) {
+      const suffix = row.status === 'ok' ? row.detail : row.reason
+      console.log(`   format ${row.tool}: ${row.status}${suffix ? ` (${suffix})` : ''}`)
+    }
+  }
+  if (phases.verify) {
+    const suffix = phases.verify.command || phases.verify.reason || phases.verify.error
+    console.log(`   verify: ${phases.verify.status}${suffix ? ` (${suffix})` : ''}`)
+  }
   console.log('\nNext:  cd <app-dir> && npm install && npm run dev')
 }
 
@@ -487,7 +523,8 @@ function help() {
     '',
     'Usage:',
     '  intentstack check   [--project DIR] [--intent FILE] [--json]    validate only',
-    '  intentstack build   [--project DIR] [--out DIR] [--target T]    validate + generate',
+    '  intentstack build   [--project DIR] [--out DIR] [--target T]    validate + generate + format + verify',
+    '                      [--no-format] [--no-verify] [--verify-install]',
     '  intentstack new     <dir> [--target T] [--name NAME] [--single-file] create a modular intent project',
     '  intentstack apply   <patch.yaml> [--write] [--out-intent F]     apply a semantic patch',
     '  intentstack split   [--project DIR] [--write]                  split monolith intent into modules',

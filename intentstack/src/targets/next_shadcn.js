@@ -67,6 +67,7 @@ function packageJson(id) {
       '@types/react-dom': '^18.3.1',
       autoprefixer: '^10.4.20',
       postcss: '^8.4.49',
+      prettier: '^3.4.2',
       tailwindcss: '^3.4.15',
       typescript: '^5.7.2',
     },

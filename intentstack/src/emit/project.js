@@ -48,6 +48,7 @@ function packageJson(id) {
       concurrently: '^9.1.0',
       daisyui: '^4.12.14',
       postcss: '^8.4.49',
+      prettier: '^3.4.2',
       tailwindcss: '^3.4.15',
       tsx: '^4.19.2',
       typescript: '^5.7.2',

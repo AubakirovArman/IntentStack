@@ -8,12 +8,18 @@ export function Hero() {
       <div className="hero-content text-center">
         <div className="max-w-3xl">
           <h1 className="text-5xl font-bold tracking-tight">{"3D Visual"}</h1>
-          <p className="py-6 text-lg opacity-70">{"A focused one-page web app for presenting 3D visualization services."}</p>
+          <p className="py-6 text-lg opacity-70">
+            {
+              "A focused one-page web app for presenting 3D visualization services."
+            }
+          </p>
           <div className="flex gap-3 justify-center flex-wrap">
-          <a href="#process" className="btn btn-primary btn-lg rounded-lg">{"View process"}</a>
+            <a href="#process" className="btn btn-primary btn-lg rounded-lg">
+              {"View process"}
+            </a>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

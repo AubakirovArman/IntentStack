@@ -68,6 +68,21 @@ test('new creates a checkable project and migrate handles v0.1 no-op', () => {
   }
 })
 
+test('build reports normalize, format and verify phases', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-build-pipeline-'))
+  try {
+    const created = run(['new', dir, '--name', 'Pipeline App'])
+    assert.equal(created.status, 0, created.stderr)
+    const built = run(['build', '--project', dir])
+    assert.equal(built.status, 0, built.stderr)
+    assert.match(built.stdout, /Normalize: ok/)
+    assert.match(built.stdout, /format prettier:/)
+    assert.match(built.stdout, /verify: skipped/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('split writes a monolith intent into modular files', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-split-'))
   try {

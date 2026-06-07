@@ -5,7 +5,9 @@
 export function DocsFooter() {
   return (
     <footer className="footer footer-center bg-base-200 text-base-content p-8">
-      <aside><p>{"IntentStack documentation generated from a semantic patch."}</p></aside>
+      <aside>
+        <p>{"IntentStack documentation generated from a semantic patch."}</p>
+      </aside>
     </footer>
-  )
+  );
 }
