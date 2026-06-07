@@ -4,10 +4,24 @@
  */
 const BASE = import.meta.env.VITE_API_URL ?? "";
 
+function csrfToken() {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie
+    .split("; ")
+    .find((part) => part.startsWith("intentstack_csrf="));
+  return match ? decodeURIComponent(match.split("=").slice(1).join("=")) : "";
+}
+
+function csrfHeaders(): Record<string, string> {
+  const token = csrfToken();
+  return token ? { "X-CSRF-Token": token } : {};
+}
+
 export async function createDemoRequest(payload: Record<string, unknown>) {
   const res = await fetch(`${BASE}/api/demo_requests`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...csrfHeaders() },
     body: JSON.stringify(payload),
   });
   const json = await res.json().catch(() => ({}));
@@ -17,7 +31,9 @@ export async function createDemoRequest(payload: Record<string, unknown>) {
 export async function listDemoRequest(): Promise<
   Array<Record<string, unknown>>
 > {
-  const res = await fetch(`${BASE}/api/demo_requests`);
+  const res = await fetch(`${BASE}/api/demo_requests`, {
+    credentials: "include",
+  });
   const json = await res.json().catch(() => ({ data: [] }));
   return (json.data ?? []) as Array<Record<string, unknown>>;
 }

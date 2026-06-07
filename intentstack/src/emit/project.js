@@ -1,22 +1,26 @@
 // Project scaffolding: package.json, tsconfig, vite/tailwind/postcss config, env, README.
 // These are pinned, conventional config files for the web_ts_minimal target.
+import { declaredUsers, hasActionAuth, hasPageAuth } from './shared/modules.js'
 
 export function emitProject(graph) {
   const id = (graph.project?.id || 'app').toLowerCase().replace(/[^a-z0-9-]/g, '-')
   const name = graph.project?.name || 'IntentStack App'
+  const useAuth = hasActionAuth(graph.actions) || hasPageAuth(graph)
   return {
-    'package.json': packageJson(id),
+    'package.json': packageJson(id, { useAuth }),
     'tsconfig.json': tsconfig(),
     'vite.config.ts': viteConfig(),
     'tailwind.config.js': tailwindConfig(),
     'postcss.config.js': postcssConfig(),
     '.gitignore': gitignore(),
-    '.env.example': envExample(),
+    '.env.example': envExample(graph, { useAuth }),
     'README.md': appReadme(name),
   }
 }
 
-function packageJson(id) {
+function packageJson(id, opts = {}) {
+  const authDeps = opts.useAuth ? { bcryptjs: '^2.4.3' } : {}
+  const authDevDeps = opts.useAuth ? { '@types/bcryptjs': '^2.4.6' } : {}
   return JSON.stringify({
     name: `${id}-generated`,
     private: true,
@@ -38,11 +42,13 @@ function packageJson(id) {
       'react-dom': '^18.3.1',
       'react-router-dom': '^6.28.0',
       zod: '^3.23.8',
+      ...authDeps,
     },
     devDependencies: {
       '@types/node': '^22.10.1',
       '@types/react': '^18.3.12',
       '@types/react-dom': '^18.3.1',
+      ...authDevDeps,
       '@vitejs/plugin-react': '^4.3.4',
       autoprefixer: '^10.4.20',
       concurrently: '^9.1.0',
@@ -112,8 +118,29 @@ function gitignore() {
   return ['node_modules', 'dist', '*.db', 'data.db', '.env'].join('\n') + '\n'
 }
 
-function envExample() {
-  return `PORT=8787\nDB_URL=file:./data.db\n# VITE_API_URL=   # leave empty in dev (vite proxies /api)\n`
+function envExample(graph, opts = {}) {
+  const lines = [
+    'PORT=8787',
+    'DB_URL=file:./data.db',
+    '# VITE_API_URL=   # leave empty in dev (vite proxies /api)',
+  ]
+  if (opts.useAuth) {
+    lines.push(
+      '',
+      'INTENTSTACK_SESSION_SECRET=replace-with-at-least-32-random-characters',
+      'INTENTSTACK_SESSION_TTL_SECONDS=28800',
+      '# Store bcrypt hashes in auth password env vars. Use INTENTSTACK_ALLOW_PLAIN_PASSWORDS=true only for local demos.',
+    )
+    for (const user of declaredUsers(graph)) {
+      const envName = passwordEnvName(user.password)
+      if (envName) lines.push(`# ${envName}=$2b$12$...`)
+    }
+  }
+  return lines.join('\n') + '\n'
+}
+
+function passwordEnvName(value) {
+  return typeof value === 'string' && value.startsWith('env:') ? value.slice(4) : null
 }
 
 function appReadme(name) {

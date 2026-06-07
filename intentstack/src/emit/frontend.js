@@ -660,7 +660,20 @@ function clientTs(graph) {
     if (!a.entity) continue
     ;(byEntity[a.entity] ||= new Set()).add(a.type)
   }
-  let out = BANNER_TS + `const BASE = import.meta.env.VITE_API_URL ?? ''\n\n`
+  let out = BANNER_TS + `const BASE = import.meta.env.VITE_API_URL ?? ''
+
+function csrfToken() {
+  if (typeof document === 'undefined') return ''
+  const match = document.cookie.split('; ').find((part) => part.startsWith('intentstack_csrf='))
+  return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : ''
+}
+
+function csrfHeaders(): Record<string, string> {
+  const token = csrfToken()
+  return token ? { 'X-CSRF-Token': token } : {}
+}
+
+`
   for (const [eid, types] of Object.entries(byEntity)) {
     const e = graph.getEntity(eid)
     const base = e?.table || eid.toLowerCase()
@@ -669,7 +682,8 @@ function clientTs(graph) {
       out += `export async function create${P}(payload: Record<string, unknown>) {
   const res = await fetch(\`\${BASE}/api/${base}\`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
     body: JSON.stringify(payload),
   })
   const json = await res.json().catch(() => ({}))
@@ -680,7 +694,7 @@ function clientTs(graph) {
     }
     if (types.has('list_records')) {
       out += `export async function list${P}(): Promise<Array<Record<string, unknown>>> {
-  const res = await fetch(\`\${BASE}/api/${base}\`)
+  const res = await fetch(\`\${BASE}/api/${base}\`, { credentials: 'include' })
   const json = await res.json().catch(() => ({ data: [] }))
   return (json.data ?? []) as Array<Record<string, unknown>>
 }
@@ -689,7 +703,7 @@ function clientTs(graph) {
     }
     if (types.has('get_record')) {
       out += `export async function get${P}(id: number): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: unknown }> {
-  const res = await fetch(BASE + '/api/${base}/' + id)
+  const res = await fetch(BASE + '/api/${base}/' + id, { credentials: 'include' })
   const json = await res.json().catch(() => ({}))
   return { ok: res.ok, data: json.data, error: json.error }
 }
@@ -700,7 +714,8 @@ function clientTs(graph) {
       out += `export async function update${P}(id: number, payload: Record<string, unknown>) {
   const res = await fetch(BASE + '/api/${base}/' + id, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
     body: JSON.stringify(payload),
   })
   const json = await res.json().catch(() => ({}))
@@ -711,7 +726,7 @@ function clientTs(graph) {
     }
     if (types.has('delete_record')) {
       out += `export async function delete${P}(id: number) {
-  const res = await fetch(BASE + '/api/${base}/' + id, { method: 'DELETE' })
+  const res = await fetch(BASE + '/api/${base}/' + id, { method: 'DELETE', credentials: 'include', headers: csrfHeaders() })
   const json = await res.json().catch(() => ({}))
   return { ok: res.ok, data: json.data, error: json.error }
 }

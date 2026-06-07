@@ -60,17 +60,46 @@ import type { ReactNode } from 'react'
 
 export const AUTH_ROLES = ${js(declaredRoles(graph))} as const
 
+type AuthState = {
+  loading: boolean
+  authenticated: boolean
+  role: string
+}
+
 function isAllowed(role: string, allowed: readonly string[]) {
   if (allowed.includes('authenticated')) return role.length > 0
   return allowed.includes(role)
 }
 
+async function loadAuth(): Promise<AuthState> {
+  const res = await fetch('/api/auth/me', { credentials: 'include' }).catch(() => null)
+  if (!res?.ok) return { loading: false, authenticated: false, role: '' }
+  const json = await res.json().catch(() => ({}))
+  return {
+    loading: false,
+    authenticated: Boolean(json.authenticated),
+    role: typeof json.role === 'string' ? json.role : '',
+  }
+}
+
 export function ProtectedPage({ roles, children }: { roles: readonly string[]; children: ReactNode }) {
-  const [role, setRole] = useState('')
+  const [auth, setAuth] = useState<AuthState>({ loading: true, authenticated: false, role: '' })
   useEffect(() => {
-    setRole(window.localStorage.getItem('intentstack.role') ?? '')
+    let cancelled = false
+    loadAuth().then((next) => { if (!cancelled) setAuth(next) })
+    return () => { cancelled = true }
   }, [])
-  if (roles.length === 0 || isAllowed(role, roles)) return <>{children}</>
+  if (auth.loading) {
+    return (
+      <main className="min-h-screen bg-white p-8 text-slate-950">
+        <div className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-xl font-semibold">Checking access</h1>
+          <p className="mt-2 text-slate-600">Verifying your server session.</p>
+        </div>
+      </main>
+    )
+  }
+  if (roles.length === 0 || isAllowed(auth.role, roles)) return <>{children}</>
   return (
     <main className="min-h-screen bg-white p-8 text-slate-950">
       <div className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -86,20 +115,150 @@ export function ProtectedPage({ roles, children }: { roles: readonly string[]; c
 export function honoAuthTs(graph, banner) {
   return banner + `import { Hono } from 'hono'
 import type { Context } from 'hono'
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
+import bcrypt from 'bcryptjs'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 export const AUTH_ROLES = ${js(declaredRoles(graph))} as const
 export const AUTH_USERS = ${js(declaredUsers(graph))} as const
-const sessions = new Map<string, { role: string; createdAt: number }>()
+const SESSION_COOKIE = 'intentstack_session'
+const CSRF_COOKIE = 'intentstack_csrf'
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+type SessionClaims = {
+  sub: string | null
+  role: string
+  exp: number
+  csrf: string
+}
+
+type SessionAuth = {
+  session: SessionClaims
+  transport: 'cookie' | 'bearer'
+}
 
 function isAllowed(role: string, allowed: readonly string[]) {
   if (allowed.includes('authenticated')) return role.length > 0
   return allowed.includes(role)
 }
 
-function readRole(c: Context) {
+function jsonError(error: string, status: number) {
+  return new Response(JSON.stringify({ error }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function assertHttps(req: Request) {
+  if (process.env.NODE_ENV !== 'production') return null
+  const proto = req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '')
+  return proto === 'https' ? null : jsonError('https_required', 426)
+}
+
+function sessionTtlSeconds() {
+  const n = Number(process.env.INTENTSTACK_SESSION_TTL_SECONDS ?? 60 * 60 * 8)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 60 * 60 * 8
+}
+
+function sessionSecret() {
+  const secret = process.env.INTENTSTACK_SESSION_SECRET
+  if (secret && secret.length >= 32) return secret
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('INTENTSTACK_SESSION_SECRET must be set to at least 32 characters in production')
+  }
+  return 'intentstack-dev-session-secret-change-me'
+}
+
+function base64url(input: string | Buffer) {
+  return Buffer.from(input).toString('base64url')
+}
+
+function hmac(value: string) {
+  return createHmac('sha256', sessionSecret()).update(value).digest('base64url')
+}
+
+function safeEqual(a: string, b: string) {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+function signSession(claims: SessionClaims) {
+  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = base64url(JSON.stringify(claims))
+  const data = \`\${header}.\${payload}\`
+  return \`\${data}.\${hmac(data)}\`
+}
+
+function parseSession(token: string | undefined | null): SessionClaims | null {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  const data = \`\${parts[0]}.\${parts[1]}\`
+  if (!safeEqual(parts[2], hmac(data))) return null
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as SessionClaims
+    if (!claims || typeof claims.role !== 'string' || typeof claims.exp !== 'number' || typeof claims.csrf !== 'string') return null
+    if (claims.exp <= Math.floor(Date.now() / 1000)) return null
+    return claims
+  } catch {
+    return null
+  }
+}
+
+function issueSession(role: string, user: string | null) {
+  const csrf = randomBytes(32).toString('base64url')
+  const maxAge = sessionTtlSeconds()
+  const token = signSession({
+    sub: user,
+    role,
+    csrf,
+    exp: Math.floor(Date.now() / 1000) + maxAge,
+  })
+  return { token, csrf, maxAge }
+}
+
+function readSession(c: Context): SessionAuth | null {
+  const cookieToken = getCookie(c, SESSION_COOKIE)
+  const cookieSession = parseSession(cookieToken)
+  if (cookieSession) return { session: cookieSession, transport: 'cookie' }
   const bearer = c.req.header('authorization')?.match(/^Bearer\\s+(.+)$/i)?.[1]
-  if (bearer) return sessions.get(bearer)?.role ?? ''
-  return c.req.header('x-intentstack-role') ?? ''
+  const bearerSession = parseSession(bearer)
+  return bearerSession ? { session: bearerSession, transport: 'bearer' } : null
+}
+
+function assertCsrf(c: Context, auth: SessionAuth) {
+  if (auth.transport !== 'cookie' || SAFE_METHODS.has(c.req.method)) return null
+  const cookie = getCookie(c, CSRF_COOKIE) ?? ''
+  const header = c.req.header('x-csrf-token') ?? ''
+  if (cookie && header && safeEqual(cookie, header) && safeEqual(auth.session.csrf, header)) return null
+  return c.json({ error: 'csrf_token_invalid' }, 403)
+}
+
+function cookieSecure(c: Context) {
+  return process.env.NODE_ENV === 'production' || c.req.header('x-forwarded-proto') === 'https'
+}
+
+function setSessionCookies(c: Context, token: string, csrf: string, maxAge: number) {
+  setCookie(c, SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: cookieSecure(c),
+    path: '/',
+    maxAge,
+  })
+  setCookie(c, CSRF_COOKIE, csrf, {
+    httpOnly: false,
+    sameSite: 'Lax',
+    secure: cookieSecure(c),
+    path: '/',
+    maxAge,
+  })
+}
+
+function clearSessionCookies(c: Context) {
+  deleteCookie(c, SESSION_COOKIE, { path: '/' })
+  deleteCookie(c, CSRF_COOKIE, { path: '/' })
 }
 
 function envRef(value: unknown) {
@@ -107,65 +266,222 @@ function envRef(value: unknown) {
   return process.env[value.slice(4)] ?? null
 }
 
-function authenticate(body: Record<string, unknown>) {
+function isBcryptHash(value: string) {
+  return /^\\$2[aby]\\$\\d{2}\\$/.test(value)
+}
+
+async function verifyPassword(password: string, expectedRef: unknown) {
+  const expected = envRef(expectedRef)
+  if (!expected) return false
+  if (isBcryptHash(expected)) return bcrypt.compare(password, expected)
+  if (process.env.INTENTSTACK_ALLOW_PLAIN_PASSWORDS === 'true' && process.env.NODE_ENV !== 'production') {
+    return safeEqual(password, expected)
+  }
+  return false
+}
+
+async function authenticate(body: Record<string, unknown>) {
   if (AUTH_USERS.length === 0) {
-    const role = typeof body.role === 'string' ? body.role : 'authenticated'
-    return AUTH_ROLES.includes(role as typeof AUTH_ROLES[number]) ? { role } : null
+    if (process.env.INTENTSTACK_DEV_AUTH === 'true' && process.env.NODE_ENV !== 'production') return { role: 'authenticated', user: null }
+    return null
   }
   const id = typeof body.username === 'string' ? body.username : typeof body.id === 'string' ? body.id : ''
   const password = typeof body.password === 'string' ? body.password : ''
   const users = AUTH_USERS as readonly { id: string; role: string; password?: string }[]
   const user = users.find((item) => item.id === id)
-  const expected = envRef(user?.password)
-  if (!user || !expected || password !== expected) return null
+  if (!user || !(await verifyPassword(password, user.password))) return null
   return { role: user.role, user: user.id }
 }
 
 export function assertRole(c: Context, allowed: readonly string[]) {
+  const https = assertHttps(c.req.raw)
+  if (https) return https
   if (allowed.length === 0) return null
-  const role = readRole(c)
-  if (isAllowed(role, allowed)) return null
+  const auth = readSession(c)
+  if (auth && isAllowed(auth.session.role, allowed)) return assertCsrf(c, auth)
   return c.json({ error: 'forbidden', required_roles: allowed }, 403)
 }
 
 export const authRoutes = new Hono()
 
 authRoutes.post('/auth/login', async (c) => {
+  const https = assertHttps(c.req.raw)
+  if (https) return https
   const body = await c.req.json().catch(() => ({}))
-  const auth = authenticate(body)
+  const auth = await authenticate(body)
   if (!auth) return c.json({ error: 'invalid_credentials' }, 401)
-  const token = crypto.randomUUID()
-  sessions.set(token, { role: auth.role, createdAt: Date.now() })
-  return c.json({ token, role: auth.role, user: auth.user ?? null })
+  const session = issueSession(auth.role, auth.user ?? null)
+  setSessionCookies(c, session.token, session.csrf, session.maxAge)
+  return c.json({ token: session.token, csrf_token: session.csrf, expires_in: session.maxAge, role: auth.role, user: auth.user ?? null })
 })
 
 authRoutes.post('/auth/logout', async (c) => {
-  const bearer = c.req.header('authorization')?.match(/^Bearer\\s+(.+)$/i)?.[1]
-  if (bearer) sessions.delete(bearer)
+  const https = assertHttps(c.req.raw)
+  if (https) return https
+  const auth = readSession(c)
+  if (auth) {
+    const csrf = assertCsrf(c, auth)
+    if (csrf) return csrf
+  }
+  clearSessionCookies(c)
   return c.json({ ok: true })
 })
 
 authRoutes.get('/auth/me', (c) => {
-  const role = readRole(c)
-  return c.json({ authenticated: role.length > 0, role: role || null })
+  const https = assertHttps(c.req.raw)
+  if (https) return https
+  const auth = readSession(c)
+  return c.json({ authenticated: Boolean(auth), role: auth?.session.role ?? null, user: auth?.session.sub ?? null })
 })
 `
 }
 
 export function requestAuthTs(graph, banner) {
-  return banner + `export const AUTH_ROLES = ${js(declaredRoles(graph))} as const
+  return banner + `import bcrypt from 'bcryptjs'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+
+export const AUTH_ROLES = ${js(declaredRoles(graph))} as const
 export const AUTH_USERS = ${js(declaredUsers(graph))} as const
-const sessions = new Map<string, { role: string; createdAt: number }>()
+const SESSION_COOKIE = 'intentstack_session'
+const CSRF_COOKIE = 'intentstack_csrf'
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+type SessionClaims = {
+  sub: string | null
+  role: string
+  exp: number
+  csrf: string
+}
+
+type SessionAuth = {
+  session: SessionClaims
+  transport: 'cookie' | 'bearer'
+}
 
 function isAllowed(role: string, allowed: readonly string[]) {
   if (allowed.includes('authenticated')) return role.length > 0
   return allowed.includes(role)
 }
 
-function readRole(req: Request) {
+function assertHttps(req: Request) {
+  if (process.env.NODE_ENV !== 'production') return null
+  const proto = req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '')
+  return proto === 'https' ? null : Response.json({ error: 'https_required' }, { status: 426 })
+}
+
+function sessionTtlSeconds() {
+  const n = Number(process.env.INTENTSTACK_SESSION_TTL_SECONDS ?? 60 * 60 * 8)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 60 * 60 * 8
+}
+
+function sessionSecret() {
+  const secret = process.env.INTENTSTACK_SESSION_SECRET
+  if (secret && secret.length >= 32) return secret
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('INTENTSTACK_SESSION_SECRET must be set to at least 32 characters in production')
+  }
+  return 'intentstack-dev-session-secret-change-me'
+}
+
+function base64url(input: string | Buffer) {
+  return Buffer.from(input).toString('base64url')
+}
+
+function hmac(value: string) {
+  return createHmac('sha256', sessionSecret()).update(value).digest('base64url')
+}
+
+function safeEqual(a: string, b: string) {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+function signSession(claims: SessionClaims) {
+  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = base64url(JSON.stringify(claims))
+  const data = \`\${header}.\${payload}\`
+  return \`\${data}.\${hmac(data)}\`
+}
+
+function parseSession(token: string | undefined | null): SessionClaims | null {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  const data = \`\${parts[0]}.\${parts[1]}\`
+  if (!safeEqual(parts[2], hmac(data))) return null
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as SessionClaims
+    if (!claims || typeof claims.role !== 'string' || typeof claims.exp !== 'number' || typeof claims.csrf !== 'string') return null
+    if (claims.exp <= Math.floor(Date.now() / 1000)) return null
+    return claims
+  } catch {
+    return null
+  }
+}
+
+function issueSession(role: string, user: string | null) {
+  const csrf = randomBytes(32).toString('base64url')
+  const maxAge = sessionTtlSeconds()
+  const token = signSession({
+    sub: user,
+    role,
+    csrf,
+    exp: Math.floor(Date.now() / 1000) + maxAge,
+  })
+  return { token, csrf, maxAge }
+}
+
+function parseCookies(req: Request) {
+  const out: Record<string, string> = {}
+  for (const part of (req.headers.get('cookie') ?? '').split(';')) {
+    const [rawName, ...rest] = part.trim().split('=')
+    if (!rawName) continue
+    out[rawName] = decodeURIComponent(rest.join('='))
+  }
+  return out
+}
+
+function readSession(req: Request): SessionAuth | null {
+  const cookies = parseCookies(req)
+  const cookieSession = parseSession(cookies[SESSION_COOKIE])
+  if (cookieSession) return { session: cookieSession, transport: 'cookie' }
   const bearer = req.headers.get('authorization')?.match(/^Bearer\\s+(.+)$/i)?.[1]
-  if (bearer) return sessions.get(bearer)?.role ?? ''
-  return req.headers.get('x-intentstack-role') ?? ''
+  const bearerSession = parseSession(bearer)
+  return bearerSession ? { session: bearerSession, transport: 'bearer' } : null
+}
+
+function assertCsrf(req: Request, auth: SessionAuth) {
+  if (auth.transport !== 'cookie' || SAFE_METHODS.has(req.method)) return null
+  const cookies = parseCookies(req)
+  const cookie = cookies[CSRF_COOKIE] ?? ''
+  const header = req.headers.get('x-csrf-token') ?? ''
+  if (cookie && header && safeEqual(cookie, header) && safeEqual(auth.session.csrf, header)) return null
+  return Response.json({ error: 'csrf_token_invalid' }, { status: 403 })
+}
+
+function cookieValue(name: string, value: string, opts: { httpOnly?: boolean; maxAge?: number; secure?: boolean }) {
+  const parts = [\`\${name}=\${encodeURIComponent(value)}\`, 'Path=/', 'SameSite=Lax']
+  if (opts.httpOnly) parts.push('HttpOnly')
+  if (opts.secure) parts.push('Secure')
+  if (opts.maxAge != null) parts.push(\`Max-Age=\${opts.maxAge}\`)
+  return parts.join('; ')
+}
+
+function sessionCookieHeaders(req: Request, token: string, csrf: string, maxAge: number) {
+  const secure = process.env.NODE_ENV === 'production' || req.headers.get('x-forwarded-proto') === 'https'
+  const headers = new Headers()
+  headers.append('Set-Cookie', cookieValue(SESSION_COOKIE, token, { httpOnly: true, secure, maxAge }))
+  headers.append('Set-Cookie', cookieValue(CSRF_COOKIE, csrf, { secure, maxAge }))
+  return headers
+}
+
+function clearCookieHeaders(req: Request) {
+  const secure = process.env.NODE_ENV === 'production' || req.headers.get('x-forwarded-proto') === 'https'
+  const headers = new Headers()
+  headers.append('Set-Cookie', cookieValue(SESSION_COOKIE, '', { httpOnly: true, secure, maxAge: 0 }))
+  headers.append('Set-Cookie', cookieValue(CSRF_COOKIE, '', { secure, maxAge: 0 }))
+  return headers
 }
 
 function envRef(value: unknown) {
@@ -173,46 +489,71 @@ function envRef(value: unknown) {
   return process.env[value.slice(4)] ?? null
 }
 
-function authenticate(body: Record<string, unknown>) {
+function isBcryptHash(value: string) {
+  return /^\\$2[aby]\\$\\d{2}\\$/.test(value)
+}
+
+async function verifyPassword(password: string, expectedRef: unknown) {
+  const expected = envRef(expectedRef)
+  if (!expected) return false
+  if (isBcryptHash(expected)) return bcrypt.compare(password, expected)
+  if (process.env.INTENTSTACK_ALLOW_PLAIN_PASSWORDS === 'true' && process.env.NODE_ENV !== 'production') {
+    return safeEqual(password, expected)
+  }
+  return false
+}
+
+async function authenticate(body: Record<string, unknown>) {
   if (AUTH_USERS.length === 0) {
-    const role = typeof body.role === 'string' ? body.role : 'authenticated'
-    return AUTH_ROLES.includes(role as typeof AUTH_ROLES[number]) ? { role } : null
+    if (process.env.INTENTSTACK_DEV_AUTH === 'true' && process.env.NODE_ENV !== 'production') return { role: 'authenticated', user: null }
+    return null
   }
   const id = typeof body.username === 'string' ? body.username : typeof body.id === 'string' ? body.id : ''
   const password = typeof body.password === 'string' ? body.password : ''
   const users = AUTH_USERS as readonly { id: string; role: string; password?: string }[]
   const user = users.find((item) => item.id === id)
-  const expected = envRef(user?.password)
-  if (!user || !expected || password !== expected) return null
+  if (!user || !(await verifyPassword(password, user.password))) return null
   return { role: user.role, user: user.id }
 }
 
 export function assertRequestRole(req: Request, allowed: readonly string[]) {
+  const https = assertHttps(req)
+  if (https) return https
   if (allowed.length === 0) return null
-  const role = readRole(req)
-  if (isAllowed(role, allowed)) return null
+  const auth = readSession(req)
+  if (auth && isAllowed(auth.session.role, allowed)) return assertCsrf(req, auth)
   return Response.json({ error: 'forbidden', required_roles: allowed }, { status: 403 })
 }
 
 export async function loginRequest(req: Request) {
+  const https = assertHttps(req)
+  if (https) return https
   const body = await req.json().catch(() => ({}))
-  const auth = authenticate(body)
+  const auth = await authenticate(body)
   if (!auth) return Response.json({ error: 'invalid_credentials' }, { status: 401 })
-  const token = crypto.randomUUID()
-  sessions.set(token, { role: auth.role, createdAt: Date.now() })
-  return Response.json({ token, role: auth.role, user: auth.user ?? null })
+  const session = issueSession(auth.role, auth.user ?? null)
+  return Response.json(
+    { token: session.token, csrf_token: session.csrf, expires_in: session.maxAge, role: auth.role, user: auth.user ?? null },
+    { headers: sessionCookieHeaders(req, session.token, session.csrf, session.maxAge) },
+  )
 }
 
 export function logoutRequest(req: Request) {
-  const role = req.headers.get('x-intentstack-role') ?? ''
-  const bearer = req.headers.get('authorization')?.match(/^Bearer\\s+(.+)$/i)?.[1]
-  if (bearer) sessions.delete(bearer)
-  return Response.json({ ok: true, role: role || null })
+  const https = assertHttps(req)
+  if (https) return https
+  const auth = readSession(req)
+  if (auth) {
+    const csrf = assertCsrf(req, auth)
+    if (csrf) return csrf
+  }
+  return Response.json({ ok: true }, { headers: clearCookieHeaders(req) })
 }
 
 export function meRequest(req: Request) {
-  const role = readRole(req)
-  return Response.json({ authenticated: role.length > 0, role: role || null })
+  const https = assertHttps(req)
+  if (https) return https
+  const auth = readSession(req)
+  return Response.json({ authenticated: Boolean(auth), role: auth?.session.role ?? null, user: auth?.session.sub ?? null })
 }
 `
 }

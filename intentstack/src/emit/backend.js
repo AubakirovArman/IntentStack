@@ -43,7 +43,7 @@ import { migrate } from './generated/db/client'
 ${imports.join('\n')}
 
 const app = new Hono()
-app.use('/api/*', cors())
+app.use('/api/*', cors({ origin: (origin) => origin || '*', credentials: true }))
 app.get('/api/health', (c) => c.json({ ok: true }))
 ${mounts.join('\n')}
 
