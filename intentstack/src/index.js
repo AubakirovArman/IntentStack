@@ -28,6 +28,7 @@ import { loadConfiguredPlugins } from './plugins.js'
 import { intentSuggestions } from './suggestions.js'
 import { voiceToPatch } from './voice_intent.js'
 import { startEditorServer } from './editor_server.js'
+import { installMarketplacePlugin } from './marketplace.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -200,9 +201,29 @@ async function main() {
   }
 
   if (cmd === 'marketplace') {
+    if (args[1] === 'install') {
+      const manifestPath = args[2] && !args[2].startsWith('--') ? args[2] : flag('manifest', null)
+      try {
+        const result = installMarketplacePlugin({ projectDir, cfg, manifestPath, write: args.includes('--write') })
+        if (args.includes('--json')) console.log(JSON.stringify(result, null, 2))
+        else {
+          console.log(`IntentStack marketplace install - ${result.id}@${result.version}`)
+          console.log(`Type: ${result.type}`)
+          console.log(`Module: ${result.module}`)
+          console.log(`Compatibility: ${result.compatibility}`)
+          if (result.written) console.log('ok plugin installed and pinned in marketplace lock')
+          else console.log('(dry run - add --write to install)')
+        }
+      } catch (e) {
+        console.error(e.message)
+        process.exit(2)
+      }
+      return
+    }
     const data = {
       targets: Object.values(TARGETS).map((target) => ({
         id: target.id,
+        version: target.version || null,
         framework: target.framework,
         ui: target.ui,
         components: target.supported_components.length,
@@ -794,6 +815,7 @@ function help() {
     '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',
     '  intentstack themes  [--json|--apply PRESET --write]              list/apply theme packs',
     '  intentstack marketplace [--json] [--kind K]                      list local extensions',
+    '  intentstack marketplace install <manifest> [--write]             install/pin local plugin',
     '  intentstack stats   [--project DIR] [--json] [--out-stats FILE]  print app/compiler metrics',
     '  intentstack security [--project DIR] [--json] [--strict]          audit security posture',
     '  intentstack docs    [--project DIR] [--out DIR]                  generate static docs site',

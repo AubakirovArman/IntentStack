@@ -22,7 +22,7 @@ Current commands:
 - `testgen`: generate API contract tests from intent record actions.
 - `deploy`: prepare provider deployment config for Vercel, Netlify, or Render; add `--execute` to run the provider command after preparation.
 - `themes`: list local theme packs and apply them through intent writeback.
-- `marketplace`: list local targets, theme packs, and domain modules.
+- `marketplace`: list local targets, theme packs, and domain modules; `marketplace install <manifest> --write` installs and pins local target plugins.
 - `collab`: inspect changed module owners and detect semantic owner conflicts against an incoming git ref.
 - `migrate`: currently no-op for DSL `0.1`.
 - `list_capabilities`: print targets, components, actions, field types and patch ops.

@@ -29,6 +29,7 @@ node src/index.js deploy --project <dir> --platform vercel --out app --execute
 node src/index.js themes --json
 node src/index.js themes enterprise --project <dir> --write
 node src/index.js marketplace --json
+node src/index.js marketplace install ./intentstack.plugin.yaml --project <dir> --write
 node src/index.js stats --project <dir> --json
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
@@ -77,6 +78,7 @@ changes instead of rewriting `0000_init.sql`.
 - `subscribe_records` actions generate `/api/<table>/stream` server-sent event endpoints.
 - `themes` lists local theme packs and can apply one back into modular intent.
 - `marketplace` lists local targets, theme packs, and domain modules available in this compiler build.
+- `marketplace install` installs local target plugin manifests with compatibility checks and a lockfile.
 
 ## Modular Example
 

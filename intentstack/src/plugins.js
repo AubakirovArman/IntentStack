@@ -40,6 +40,7 @@ function targetCapabilities(entry, mod, adapter, modulePath) {
     supported_actions: caps.supported_actions || caps.actions || [],
     supported_field_types: caps.supported_field_types || caps.field_types || FIELD_TYPES,
     plugin: true,
+    version: entry.version,
     module: modulePath,
   }
 }

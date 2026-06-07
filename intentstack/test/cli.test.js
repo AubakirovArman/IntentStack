@@ -95,6 +95,67 @@ test('marketplace lists local targets, themes and domain modules', () => {
   assert.equal(filtered.targets, undefined)
 })
 
+test('marketplace installs and pins local target plugin manifests', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-marketplace-install-'))
+  try {
+    const created = run(['new', dir, '--name', 'Marketplace App'])
+    assert.equal(created.status, 0, created.stderr)
+    mkdirSync(join(dir, 'plugin-src'), { recursive: true })
+    writeFileSync(join(dir, 'plugin-src/static-target.mjs'), `export function planFiles(graph) {
+  return { 'dist/index.html': '<h1>' + graph.project.name + '</h1>\\n' }
+}
+`)
+    writeFileSync(join(dir, 'plugin-src/intentstack.plugin.yaml'), `id: static_html
+type: target
+version: 1.2.3
+compatibility:
+  intentstack: ">=0.1.0"
+module: static-target.mjs
+capabilities:
+  framework: static
+  ui: none
+  frontend: true
+  backend: false
+  database: false
+  supported_components: [hero]
+  supported_actions: []
+  supported_field_types: [string]
+`)
+    const manifest = join(dir, 'plugin-src/intentstack.plugin.yaml')
+    const dry = run(['marketplace', 'install', manifest, '--project', dir, '--json'])
+    assert.equal(dry.status, 0, dry.stderr)
+    assert.equal(JSON.parse(dry.stdout).written, false)
+    assert.equal(existsSync(join(dir, '.intentstack/marketplace-lock.json')), false)
+
+    const installed = run(['marketplace', 'install', manifest, '--project', dir, '--write'])
+    assert.equal(installed.status, 0, installed.stderr)
+    assert.match(installed.stdout, /ok plugin installed/)
+    assert.ok(existsSync(join(dir, '.intentstack/plugins/static_html/static-target.mjs')))
+    assert.match(readFileSync(join(dir, 'intentstack.config.yaml'), 'utf8'), /version: 1\.2\.3/)
+    const lock = JSON.parse(readFileSync(join(dir, '.intentstack/marketplace-lock.json'), 'utf8'))
+    assert.equal(lock.plugins.static_html.version, '1.2.3')
+
+    const market = run(['marketplace', '--project', dir, '--json'])
+    assert.equal(market.status, 0, market.stderr)
+    const target = JSON.parse(market.stdout).targets.find((item) => item.id === 'static_html')
+    assert.equal(target.source, 'plugin')
+    assert.equal(target.version, '1.2.3')
+
+    writeFileSync(join(dir, 'plugin-src/incompatible.plugin.yaml'), `id: future_target
+type: target
+version: 9.0.0
+compatibility:
+  intentstack: ">=9.0.0"
+module: static-target.mjs
+`)
+    const incompatible = run(['marketplace', 'install', join(dir, 'plugin-src/incompatible.plugin.yaml'), '--project', dir, '--write'])
+    assert.equal(incompatible.status, 2)
+    assert.match(incompatible.stderr, /requires IntentStack >=9\.0\.0/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('configured plugin target adapters participate in validation, marketplace and build', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-plugin-target-'))
   try {
