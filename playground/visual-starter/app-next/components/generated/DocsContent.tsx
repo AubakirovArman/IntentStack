@@ -10,16 +10,23 @@ export function DocsContent() {
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#generated">{"What it can generate"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#workflow">{"Agent workflow"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#core-loop">{"Core compiler loop"}</a>
+            <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#modular-first">{"Modular structure is the foundation"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#semantic-patches">{"Semantic patches"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#targets">{"Targets"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#diagnostics">{"Diagnostics and safety"}</a>
+            <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#authoring-examples">{"Authoring examples"}</a>
+            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#cards-example">{"Add cards"}</a>
+            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#form-example">{"Add a form"}</a>
+            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#table-example">{"Add a table"}</a>
+            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#pricing-stats-example">{"Add pricing or stats"}</a>
+            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#page-nav-example">{"Add a page and navigation item"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#current-limits">{"Current limits"}</a>
           </nav>
         </aside>
         <article className="space-y-6">
           <h1 className="text-4xl font-bold tracking-tight">{"IntentStack Documentation"}</h1>
           <h2 id="overview" className="pt-4 text-2xl font-semibold tracking-tight">{"What IntentStack is"}</h2>
-          <p className="text-base leading-7 text-muted-foreground">{"IntentStack is an AI-native fullstack compiler. The application is described as intent in intent/app.intent.yaml, and the compiler generates framework code, routes, API handlers, database files, styles, and migrations."}</p>
+          <p className="text-base leading-7 text-muted-foreground">{"IntentStack is an AI-native fullstack compiler. The application is described as modular intent: a small root manifest includes focused files under shared, frontend, and backend folders. The compiler assembles those modules and generates framework code, routes, API handlers, database files, styles, and migrations."}</p>
           <h2 id="generated" className="pt-4 text-2xl font-semibold tracking-tight">{"What it can generate"}</h2>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>{"Multi-page React/Vite applications for the web_ts_minimal target."}</li>
@@ -30,11 +37,11 @@ export function DocsContent() {
           </ul>
           <h2 id="workflow" className="pt-4 text-2xl font-semibold tracking-tight">{"Agent workflow"}</h2>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-            <li>{"Read the current intent before changing behavior."}</li>
+            <li>{"Read the root intent and the relevant owner module before changing behavior."}</li>
             <li>{"Express the next change as a semantic patch instead of editing generated code."}</li>
             <li>{"Run intentstack apply as a dry run and inspect the semantic diff."}</li>
-            <li>{"Run intentstack check, then intentstack build."}</li>
-            <li>{"Verify the generated application with typecheck and production build."}</li>
+            <li>{"Run intentstack apply --write so the compiler writes back to the owner module."}</li>
+            <li>{"Run intentstack check, intentstack build, then verify the generated application."}</li>
           </ul>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{"powershell"}</div>
           <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"node ..\\..\\intentstack\\src\\index.js apply .\\patches\\004-write-tool-documentation.yaml --project .\nnode ..\\..\\intentstack\\src\\index.js check --project .\nnode ..\\..\\intentstack\\src\\index.js build --project .\n"}</code></pre>
@@ -46,8 +53,16 @@ export function DocsContent() {
             <li>{"Plan generated files before writing them."}</li>
             <li>{"Emit target-specific frontend, backend, database, and support files."}</li>
           </ul>
+          <h2 id="modular-first" className="pt-4 text-2xl font-semibold tracking-tight">{"Modular structure is the foundation"}</h2>
+          <p className="text-base leading-7 text-muted-foreground">{"A real app should not grow as one huge YAML file. Keep the root file as a manifest and put behavior into small owner modules. This gives agents a precise edit target and keeps diagnostics actionable."}</p>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"text"}</div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"intent/\n  app.intent.yaml                 # version, project, includes\n  shared/\n    navigation.yaml               # global navigation\n    theme.yaml                    # design tokens\n  frontend/\n    pages/\n      home.page.yaml              # route + section refs\n      docs.page.yaml\n    sections/\n      home/hero.section.yaml      # focused UI modules\n      docs/docs-content.section.yaml\n  backend/\n    entities/lead.entity.yaml     # data model modules\n    actions/create-lead.action.yaml\n"}</code></pre>
+          <div className="rounded-lg border bg-muted/50 p-4">
+            <p className="font-semibold">{"Patch writeback"}</p>
+            <p className="leading-7 text-muted-foreground">{"In a modular project, intentstack apply --write preserves the module layout. A docs copy change writes to the docs section file, a navigation change writes to shared/navigation.yaml, and an entity change writes to backend/entities."}</p>
+          </div>
           <h2 id="semantic-patches" className="pt-4 text-2xl font-semibold tracking-tight">{"Semantic patches"}</h2>
-          <p className="text-base leading-7 text-muted-foreground">{"Patches are small machine-readable changes such as navigation.item.add, page.create, section.add, entity.field.add, and content.block.update. The compiler validates the result before writing it back to intent/app.intent.yaml."}</p>
+          <p className="text-base leading-7 text-muted-foreground">{"Patches are small machine-readable changes such as navigation.item.add, page.create, section.add, entity.field.add, and content.block.update. The compiler validates the assembled result before writing changes back to the correct owner module."}</p>
           <h2 id="targets" className="pt-4 text-2xl font-semibold tracking-tight">{"Targets"}</h2>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>{"web_ts_minimal emits Vite, React, Tailwind/daisyUI, Hono API, Drizzle, and SQLite."}</li>
@@ -61,10 +76,73 @@ export function DocsContent() {
             <li>{"Generated zones are disposable; custom code belongs outside generated folders."}</li>
             <li>{"diff, graph, stats, security, and verify commands help audit intent and output."}</li>
           </ul>
+          <h2 id="authoring-examples" className="pt-4 text-2xl font-semibold tracking-tight">{"Authoring examples"}</h2>
+          <p className="text-base leading-7 text-muted-foreground">{"These snippets show the normal way to extend an app. Save a focused patch file, run intentstack apply as a dry run, then run it again with --write so the modular owner files are updated safely."}</p>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+              <th className="px-4 py-3 text-left font-medium">{"Goal"}</th>
+              <th className="px-4 py-3 text-left font-medium">{"Patch ops"}</th>
+              <th className="px-4 py-3 text-left font-medium">{"Generated result"}</th>
+                </tr>
+              </thead>
+              <tbody>
+            <tr className="border-t">
+              <td className="px-4 py-3">{"Add cards"}</td>
+              <td className="px-4 py-3">{"section.add"}</td>
+              <td className="px-4 py-3">{"React card grid component"}</td>
+            </tr>
+            <tr className="border-t">
+              <td className="px-4 py-3">{"Add a form"}</td>
+              <td className="px-4 py-3">{"entity.create + action.create + form.add"}</td>
+              <td className="px-4 py-3">{"Form UI plus POST API route"}</td>
+            </tr>
+            <tr className="border-t">
+              <td className="px-4 py-3">{"Add a table"}</td>
+              <td className="px-4 py-3">{"action.create + table.add"}</td>
+              <td className="px-4 py-3">{"Data table plus GET API client"}</td>
+            </tr>
+            <tr className="border-t">
+              <td className="px-4 py-3">{"Add plans or metrics"}</td>
+              <td className="px-4 py-3">{"section.add"}</td>
+              <td className="px-4 py-3">{"Pricing or stats section"}</td>
+            </tr>
+            <tr className="border-t">
+              <td className="px-4 py-3">{"Add a page"}</td>
+              <td className="px-4 py-3">{"page.create + navigation.item.add"}</td>
+              <td className="px-4 py-3">{"New route and nav item"}</td>
+            </tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 id="cards-example" className="pt-3 text-xl font-semibold">{"Add cards"}</h3>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: section.add\n    page: home\n    after: hero\n    section:\n      id: services\n      type: card_grid\n      title: Services\n      columns: 3\n      items:\n        - title: Interior renders\n          text: Room scenes with materials, lighting, and camera direction.\n        - title: Product shots\n          text: Studio-style visuals for catalogs and landing pages.\n        - title: Animation frames\n          text: Key frames for motion concepts and presentations.\n"}</code></pre>
+          <h3 id="form-example" className="pt-3 text-xl font-semibold">{"Add a form"}</h3>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: entity.create\n    id: Brief\n    table: briefs\n    fields:\n      - id: name\n        type: string\n        label: Name\n        required: true\n      - id: email\n        type: string\n        label: Email\n        required: true\n      - id: project_type\n        type: enum\n        label: Project type\n        values: [interior, product, animation]\n      - id: notes\n        type: text\n        label: Notes\n  - op: action.create\n    id: create_brief\n    type: create_record\n    entity: Brief\n  - op: form.add\n    page: home\n    id: brief_form\n    title: Request a visualization brief\n    entity: Brief\n    fields: [name, email, project_type, notes]\n    action: create_brief\n"}</code></pre>
+          <h3 id="table-example" className="pt-3 text-xl font-semibold">{"Add a table"}</h3>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: action.create\n    id: list_briefs\n    type: list_records\n    entity: Brief\n  - op: page.create\n    id: dashboard_briefs\n    path: /dashboard/briefs\n    layout: dashboard\n  - op: table.add\n    page: dashboard_briefs\n    id: briefs_table\n    entity: Brief\n    action: list_briefs\n    columns: [name, email, project_type]\n"}</code></pre>
+          <h3 id="pricing-stats-example" className="pt-3 text-xl font-semibold">{"Add pricing or stats"}</h3>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: section.add\n    page: home\n    after: process\n    section:\n      id: pricing\n      type: pricing_cards\n      title: Visualization packages\n      items:\n        - title: Concept\n          price: from $300\n          features: [One room, Two angles, Basic material pass]\n        - title: Presentation\n          price: from $900\n          features: [Three scenes, Styled lighting, Revision pass]\n  - op: section.add\n    page: home\n    after: pricing\n    section:\n      id: proof\n      type: stats\n      title: Delivery metrics\n      items:\n        - label: Average first draft\n          value: 3 days\n        - label: Supported formats\n          value: 6+\n"}</code></pre>
+          <h3 id="page-nav-example" className="pt-3 text-xl font-semibold">{"Add a page and navigation item"}</h3>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: page.create\n    id: case_studies\n    path: /case-studies\n    layout: docs\n    sections:\n      - id: case_studies_content\n        type: content\n        title: Case studies\n        blocks:\n          - id: intro\n            type: paragraph\n            text: Show examples of previous visualization work.\n  - op: navigation.item.add\n    item:\n      label: Case studies\n      href: /case-studies\n"}</code></pre>
+          <div className="rounded-lg border bg-muted/50 p-4">
+            <p className="font-semibold">{"Practical rule"}</p>
+            <p className="leading-7 text-muted-foreground">{"Keep each patch focused. One page, one section, or one entity change is easier to review and easier to roll back."}</p>
+          </div>
+          <div className="rounded-lg border bg-muted/50 p-4">
+            <p className="font-semibold">{"Live components below"}</p>
+            <p className="leading-7 text-muted-foreground">{"The next sections are actual generated components from separate intent modules: a card grid, a working form, a data table, pricing cards, and stats."}</p>
+          </div>
           <h2 id="current-limits" className="pt-4 text-2xl font-semibold tracking-tight">{"Current limits"}</h2>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>{"There is not yet a visual browser editor; editing is done through intent and patch files."}</li>
-            <li>{"Content blocks are useful, but still basic: no nested rich text, links, callouts, or reusable snippets."}</li>
+            <li>{"Content is intentionally structured, so it is reliable for agents but not yet a full rich text editor."}</li>
             <li>{"Generated dependency versions still need an audit-hardening pass."}</li>
             <li>{"Production auth, durable workflows, deployments, and provider-specific integrations need deeper hardening."}</li>
           </ul>

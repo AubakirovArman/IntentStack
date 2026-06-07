@@ -4,3 +4,19 @@
  */
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
+export async function createDemoRequest(payload: Record<string, unknown>) {
+  const res = await fetch(`${BASE}/api/demo_requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const json = await res.json().catch(() => ({}))
+  return { ok: res.ok, data: json.data, error: json.error }
+}
+
+export async function listDemoRequest(): Promise<Array<Record<string, unknown>>> {
+  const res = await fetch(`${BASE}/api/demo_requests`)
+  const json = await res.json().catch(() => ({ data: [] }))
+  return (json.data ?? []) as Array<Record<string, unknown>>
+}
+

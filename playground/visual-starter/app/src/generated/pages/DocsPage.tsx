@@ -4,6 +4,11 @@
  */
 import { AppNav } from '../components/AppNav'
 import { DocsContent } from '../components/DocsContent'
+import { DocsComponentCards } from '../components/DocsComponentCards'
+import { DocsComponentForm } from '../components/DocsComponentForm'
+import { DocsComponentTable } from '../components/DocsComponentTable'
+import { DocsComponentPricing } from '../components/DocsComponentPricing'
+import { DocsComponentStats } from '../components/DocsComponentStats'
 import { DocsFooter } from '../components/DocsFooter'
 
 
@@ -12,6 +17,11 @@ export function DocsPage() {
     <main className="min-h-screen bg-base-100">
       <AppNav />
       <DocsContent />
+      <DocsComponentCards />
+      <DocsComponentForm />
+      <DocsComponentTable />
+      <DocsComponentPricing />
+      <DocsComponentStats />
       <DocsFooter />
     </main>
   )

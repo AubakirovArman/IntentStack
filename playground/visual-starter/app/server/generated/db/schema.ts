@@ -3,3 +3,13 @@
  * Source of truth: intent/app.intent.yaml — re-run `intentstack build` to regenerate.
  */
 import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core'
+
+export const demorequest = sqliteTable('demo_requests', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  project_type: text('project_type').notNull(),
+  budget: real('budget'),
+  message: text('message'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+})

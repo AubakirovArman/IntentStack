@@ -1,0 +1,26 @@
+entity:
+  id: DemoRequest
+  table: demo_requests
+  fields:
+    - id: name
+      type: string
+      label: Name
+      required: true
+    - id: email
+      type: string
+      label: Email
+      required: true
+    - id: project_type
+      type: enum
+      label: Project type
+      values:
+        - interior
+        - product
+        - animation
+      required: true
+    - id: budget
+      type: number
+      label: Budget
+    - id: message
+      type: text
+      label: Message

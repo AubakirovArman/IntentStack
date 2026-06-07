@@ -138,6 +138,10 @@ export function DocsContent() {
             <p className="font-semibold">{"Practical rule"}</p>
             <p className="leading-7 opacity-80">{"Keep each patch focused. One page, one section, or one entity change is easier to review and easier to roll back."}</p>
           </div>
+          <div className="rounded-lg border border-info/30 bg-info/10 p-4">
+            <p className="font-semibold">{"Live components below"}</p>
+            <p className="leading-7 opacity-80">{"The next sections are actual generated components from separate intent modules: a card grid, a working form, a data table, pricing cards, and stats."}</p>
+          </div>
           <h2 id="current-limits" className="text-2xl font-semibold tracking-tight pt-4">{"Current limits"}</h2>
           <ul className="list-disc space-y-2 pl-6 opacity-80">
             <li>{"There is not yet a visual browser editor; editing is done through intent and patch files."}</li>

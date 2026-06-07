@@ -6,12 +6,12 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { migrate } from './generated/db/client'
-
+import demorequestRoutes from './generated/routes/demorequest'
 
 const app = new Hono()
 app.use('/api/*', cors())
 app.get('/api/health', (c) => c.json({ ok: true }))
-
+app.route('/api', demorequestRoutes)
 
 const port = Number(process.env.PORT ?? 8787)
 await migrate()

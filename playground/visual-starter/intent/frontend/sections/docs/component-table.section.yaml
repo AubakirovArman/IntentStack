@@ -1,0 +1,11 @@
+section:
+  id: docs_component_table
+  type: table
+  entity: DemoRequest
+  source:
+    action: list_demo_requests
+  columns:
+    - name
+    - email
+    - project_type
+    - budget

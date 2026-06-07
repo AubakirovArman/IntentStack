@@ -1,0 +1,23 @@
+section:
+  id: docs_component_pricing
+  type: pricing_cards
+  title: Live pricing_cards example
+  items:
+    - title: Starter
+      price: from $300
+      features:
+        - One room or product
+        - Two camera angles
+        - Basic material pass
+    - title: Studio
+      price: from $900
+      features:
+        - Three scenes
+        - Styled lighting
+        - Revision pass
+    - title: Launch
+      price: custom
+      features:
+        - Landing page visuals
+        - Batch export
+        - Motion-ready frames

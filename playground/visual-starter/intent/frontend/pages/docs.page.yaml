@@ -4,4 +4,9 @@ page:
   layout: docs
   sections:
     - ref: docs_content
+    - ref: docs_component_cards
+    - ref: docs_component_form
+    - ref: docs_component_table
+    - ref: docs_component_pricing
+    - ref: docs_component_stats
     - ref: docs_footer

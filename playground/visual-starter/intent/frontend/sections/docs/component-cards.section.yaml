@@ -1,0 +1,12 @@
+section:
+  id: docs_component_cards
+  type: card_grid
+  title: Live card_grid example
+  columns: 3
+  items:
+    - title: Card title
+      text: A card_grid section renders repeated cards from structured items.
+    - title: Agent-friendly
+      text: Each card is data, so an agent can add, remove, or update cards safely.
+    - title: Target-owned UI
+      text: The intent declares the content; the target adapter owns the React markup.

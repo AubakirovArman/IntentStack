@@ -1,0 +1,12 @@
+version: 0.1
+patch:
+  - op: content.block.add
+    section: docs_content
+    after: authoring_note
+    block:
+      id: live_component_demo_note
+      type: callout
+      title: Live components below
+      text: >-
+        The next sections are actual generated components from separate intent modules: a card grid,
+        a working form, a data table, pricing cards, and stats.

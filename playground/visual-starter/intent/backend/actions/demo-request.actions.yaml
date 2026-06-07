@@ -1,0 +1,7 @@
+actions:
+  - id: create_demo_request
+    type: create_record
+    entity: DemoRequest
+  - id: list_demo_requests
+    type: list_records
+    entity: DemoRequest

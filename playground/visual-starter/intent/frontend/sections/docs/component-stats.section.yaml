@@ -1,0 +1,14 @@
+section:
+  id: docs_component_stats
+  type: stats
+  title: Live stats example
+  items:
+    - label: First draft
+      value: 3 days
+      text: Typical initial delivery window.
+    - label: Formats
+      value: 6+
+      text: Common web and presentation exports.
+    - label: Modules
+      value: 100%
+      text: This page is assembled from section modules.

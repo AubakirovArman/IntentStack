@@ -1,0 +1,14 @@
+section:
+  id: docs_component_form
+  type: form
+  title: Live form example
+  entity: DemoRequest
+  fields:
+    - name
+    - email
+    - project_type
+    - budget
+    - message
+  submit:
+    action: create_demo_request
+    success_message: Demo request saved.
