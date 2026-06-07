@@ -1,5 +1,7 @@
 # IntentStack v0.1 — AI-native fullstack compiler (working prototype)
 
+![CI](https://github.com/AubakirovArman/IntentStack/actions/workflows/ci.yml/badge.svg)
+
 > One declarative intent file -> a real, running fullstack app.
 > The AI writes **intent**; the compiler writes the **code**.
 > And the SAME intent compiles to **two different stacks** by changing one flag.
@@ -11,7 +13,7 @@ schema, API and form/table wiring — all generated from one source of truth.
 ```
                       intent/app.intent.yaml   (one source of truth)
                                  |
-              parse -> validate -> Core IR -> plan -> emit (per target)
+              parse -> normalize -> validate -> Core IR -> plan -> emit -> format -> verify
                                  |
                +------------------+-------------------+
               v                                      v
@@ -91,7 +93,7 @@ Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, 
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; workflow/integration metadata and
-webhook dispatch.
+webhook dispatch; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
 
 Still partial: Rust compiler core, production sessions/login, durable workflow jobs,
 provider-specific integration clients and a visual editor.

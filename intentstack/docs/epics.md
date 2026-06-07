@@ -16,7 +16,7 @@ Status legend:
 6. CRUD completeness: `done`. CRUD routes and clients are generated; dashboard row actions support detail/edit/delete, and dedicated dynamic record detail pages are generated for both targets.
 7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
 8. Generated/custom extension model: `done`. `custom_component` validates source/export, validates declared props schemas, and emits wrappers with typed props for both targets.
-9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff and examples x targets verify tests exist; `verify --npm-build` has passed the full npm install/build matrix for all examples and both targets.
+9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff and examples x targets verify tests exist; GitHub Actions runs lint, Node tests, Rust tests, and generated app build matrix for both targets.
 10. Docs and AI-agent protocol: `done`. Core docs exist, AGENTS/README are current, and `intentstack docs --out` generates a static documentation site.
 11. Security, verification, metrics: `done`. Validation, safe CRUD basics, secret checks, auth guards, sessions, `verify`, `stats`, and `security` audit gates exist and are tested.
 

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  compiler:
+    name: Compiler checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: intentstack
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: intentstack/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: cargo test
+
+  generated-builds:
+    name: Generated app build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    needs: compiler
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [web_ts_minimal, next_shadcn]
+    defaults:
+      run:
+        working-directory: intentstack
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: intentstack/package-lock.json
+      - run: npm ci
+      - run: node src/index.js verify --examples examples --targets ${{ matrix.target }} --npm-build

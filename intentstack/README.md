@@ -60,6 +60,7 @@ Read `docs/modular-intent.md` for the module layout and patch writeback contract
 ## Test Gates
 
 ```bash
+npm run lint
 npm test
 cargo test
 node ../intentstack/src/index.js check --project ../demo
@@ -71,3 +72,5 @@ node ../intentstack/src/index.js verify --examples examples --targets web_ts_min
 
 `intentstack build` runs generated `npm run build` automatically when `node_modules` exists. Run
 generated `npm run typecheck` as an additional local gate when needed.
+GitHub Actions runs compiler lint/tests, Rust tests, and generated app `--npm-build` verification
+for both supported targets.
