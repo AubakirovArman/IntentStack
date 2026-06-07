@@ -5,6 +5,7 @@ import { BANNER_TS, pascal, jsStr, t } from './util.js'
 import { componentClasses, radiusClass, density } from '../registry.js'
 import { hasPageAuth, isActivePolicy, reactAuthTs, roleLiteral } from './shared/modules.js'
 import { createSectionRenderer } from './shared/sections.js'
+import { tenancyConfig } from './shared/tenancy.js'
 
 export function emitFrontend(graph) {
   const files = {}
@@ -665,6 +666,7 @@ function clientTs(graph) {
     if (!a.entity) continue
     ;(byEntity[a.entity] ||= new Set()).add(a.type)
   }
+  const tenancy = tenancyConfig(graph)
   let out = BANNER_TS + `const BASE = import.meta.env.VITE_API_URL ?? ''
 
 function csrfToken() {
@@ -678,6 +680,25 @@ function csrfHeaders(): Record<string, string> {
   return token ? { 'X-CSRF-Token': token } : {}
 }
 
+${tenancy ? `function tenantId() {
+  if (typeof window === 'undefined') return ''
+  return window.localStorage.getItem(${jsStr(tenancy.storageKey)}) ?? ''
+}
+
+function tenantHeaders(): Record<string, string> {
+  const tenant = tenantId()
+  return tenant ? { ${jsStr(tenancy.header)}: tenant } : {}
+}
+
+function tenantQuery() {
+  const tenant = tenantId()
+  return tenant ? '?tenant_id=' + encodeURIComponent(tenant) : ''
+}
+
+` : `function tenantHeaders(): Record<string, string> { return {} }
+function tenantQuery() { return '' }
+
+`}
 `
   for (const [eid, types] of Object.entries(byEntity)) {
     const e = graph.getEntity(eid)
@@ -688,7 +709,7 @@ function csrfHeaders(): Record<string, string> {
   const res = await fetch(\`\${BASE}/api/${base}\`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+    headers: { 'Content-Type': 'application/json', ...tenantHeaders(), ...csrfHeaders() },
     body: JSON.stringify(payload),
   })
   const json = await res.json().catch(() => ({}))
@@ -699,7 +720,7 @@ function csrfHeaders(): Record<string, string> {
     }
     if (types.has('list_records')) {
       out += `export async function list${P}(): Promise<Array<Record<string, unknown>>> {
-  const res = await fetch(\`\${BASE}/api/${base}\`, { credentials: 'include' })
+  const res = await fetch(\`\${BASE}/api/${base}\`, { credentials: 'include', headers: tenantHeaders() })
   const json = await res.json().catch(() => ({ data: [] }))
   return (json.data ?? []) as Array<Record<string, unknown>>
 }
@@ -708,7 +729,7 @@ function csrfHeaders(): Record<string, string> {
     }
     if (types.has('get_record')) {
       out += `export async function get${P}(id: number): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: unknown }> {
-  const res = await fetch(BASE + '/api/${base}/' + id, { credentials: 'include' })
+  const res = await fetch(BASE + '/api/${base}/' + id, { credentials: 'include', headers: tenantHeaders() })
   const json = await res.json().catch(() => ({}))
   return { ok: res.ok, data: json.data, error: json.error }
 }
@@ -720,7 +741,7 @@ function csrfHeaders(): Record<string, string> {
   const res = await fetch(BASE + '/api/${base}/' + id, {
     method: 'PUT',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+    headers: { 'Content-Type': 'application/json', ...tenantHeaders(), ...csrfHeaders() },
     body: JSON.stringify(payload),
   })
   const json = await res.json().catch(() => ({}))
@@ -731,7 +752,7 @@ function csrfHeaders(): Record<string, string> {
     }
     if (types.has('delete_record')) {
       out += `export async function delete${P}(id: number) {
-  const res = await fetch(BASE + '/api/${base}/' + id, { method: 'DELETE', credentials: 'include', headers: csrfHeaders() })
+  const res = await fetch(BASE + '/api/${base}/' + id, { method: 'DELETE', credentials: 'include', headers: { ...tenantHeaders(), ...csrfHeaders() } })
   const json = await res.json().catch(() => ({}))
   return { ok: res.ok, data: json.data, error: json.error }
 }
@@ -740,7 +761,7 @@ function csrfHeaders(): Record<string, string> {
     }
     if (types.has('subscribe_records')) {
       out += `export function subscribe${P}(onRecords: (rows: Array<Record<string, unknown>>) => void, onError?: (event: Event) => void) {
-  const source = new EventSource(\`\${BASE}/api/${base}/stream\`, { withCredentials: true })
+  const source = new EventSource(\`\${BASE}/api/${base}/stream\${tenantQuery()}\`, { withCredentials: true })
   source.addEventListener('records', (event) => {
     const json = JSON.parse((event as MessageEvent).data)
     onRecords((json.data ?? []) as Array<Record<string, unknown>>)

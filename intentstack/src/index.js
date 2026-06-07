@@ -921,6 +921,7 @@ function graphSummary(graph) {
     project: graph.project,
     theme: graph.theme,
     auth: graph.auth,
+    tenancy: graph.tenancy,
     entities: graph.entities.map((e) => ({
       id: e.id,
       table: e.table || e.id.toLowerCase(),
@@ -980,6 +981,7 @@ function statsSummary(graph, diagnostics, files) {
       protected_actions: protectedActions,
       dashboard_pages: graph.pages.filter((page) => page.layout === 'dashboard').length,
       public_dashboard_pages: graph.pages.filter((page) => page.layout === 'dashboard' && !page.auth).length,
+      multi_tenant: graph.tenancy?.enabled === true,
     },
   }
 }

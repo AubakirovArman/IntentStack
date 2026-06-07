@@ -175,3 +175,39 @@ test('subscribe_records actions require an entity', () => {
   assert.equal(d.hasErrors(), true)
   assert.ok(d.errors.some((e) => e.code === 'E2033'))
 })
+
+test('validates multi-tenant configuration', () => {
+  const valid = validate({
+    version: '0.1',
+    project: { id: 'tenant_app', target: 'web_ts_minimal' },
+    tenancy: { enabled: true, header: 'X-Org-Id', storage_key: 'tenant.org_id' },
+    entities: [{ id: 'Lead', fields: [{ id: 'name', type: 'string' }] }],
+    actions: [{ id: 'list_leads', type: 'list_records', entity: 'Lead' }],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(valid.hasErrors(), false, valid.format())
+
+  const malformed = validate({
+    version: '0.1',
+    project: { id: 'bad_tenant_app', target: 'web_ts_minimal' },
+    tenancy: { enabled: false, header: 'bad header', storage_key: '' },
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(malformed.hasErrors(), true)
+  assert.ok(malformed.errors.some((e) => e.code === 'E2301'))
+  assert.ok(malformed.errors.some((e) => e.code === 'E2302'))
+  assert.ok(malformed.errors.some((e) => e.code === 'E2303'))
+})
+
+test('tenantId field is reserved when tenancy is enabled', () => {
+  const d = validate({
+    version: '0.1',
+    project: { id: 'reserved_tenant_field', target: 'web_ts_minimal' },
+    tenancy: { enabled: true },
+    entities: [{ id: 'Lead', fields: [{ id: 'tenantId', type: 'string' }] }],
+    actions: [{ id: 'list_leads', type: 'list_records', entity: 'Lead' }],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(d.hasErrors(), true)
+  assert.ok(d.errors.some((e) => e.code === 'E2310'))
+})

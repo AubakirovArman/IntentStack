@@ -13,6 +13,7 @@ const ROOT_KEYS = new Set([
   'navigation',
   'includes',
   'auth',
+  'tenancy',
   'entities',
   'actions',
   'pages',
@@ -58,6 +59,7 @@ export function validate(ast, opts = {}) {
   }
 
   validateNavigation(d, ast.navigation)
+  validateTenancy(d, ast.tenancy)
 
   // ---- entities -------------------------------------------------------------
   const entities = asArray(d, ast.entities, 'entities')
@@ -76,6 +78,12 @@ export function validate(ast, opts = {}) {
       if (f.type && !FIELD_TYPES.includes(f.type)) {
         d.error('E4002', `Unsupported field type "${f.type}".`, {
           path: `${fp}.type`, suggestion: `Supported: ${FIELD_TYPES.join(', ')}`,
+        })
+      }
+      if (ast.tenancy?.enabled === true && f.id === 'tenantId') {
+        d.error('E2310', `Field "tenantId" in entity "${e.id}" is reserved when tenancy.enabled is true.`, {
+          path: `${fp}.id`,
+          suggestion: 'Remove the field; IntentStack will generate tenantId automatically.',
         })
       }
     }
@@ -361,6 +369,23 @@ function validateAuth(d, auth) {
     }
   }
   return roles
+}
+
+function validateTenancy(d, tenancy) {
+  if (tenancy == null || tenancy === false) return
+  if (typeof tenancy !== 'object' || Array.isArray(tenancy)) {
+    d.error('E2300', 'tenancy must be an object or false.', { path: 'tenancy' })
+    return
+  }
+  if (tenancy.enabled !== true) {
+    d.error('E2301', 'tenancy.enabled must be true when tenancy is configured.', { path: 'tenancy.enabled' })
+  }
+  if (tenancy.header != null && (typeof tenancy.header !== 'string' || !/^[a-z][a-z0-9-]*$/i.test(tenancy.header))) {
+    d.error('E2302', 'tenancy.header must be an HTTP header name.', { path: 'tenancy.header' })
+  }
+  if (tenancy.storage_key != null && (typeof tenancy.storage_key !== 'string' || tenancy.storage_key.length === 0)) {
+    d.error('E2303', 'tenancy.storage_key must be a non-empty string.', { path: 'tenancy.storage_key' })
+  }
 }
 
 function validateAuthPolicy(d, policy, path, roleIds) {

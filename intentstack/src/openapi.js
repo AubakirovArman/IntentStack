@@ -1,8 +1,10 @@
 import YAML from 'js-yaml'
 import { ENTITY_ACTIONS } from './registry.js'
 import { hasActionAuth, hasPageAuth, isActivePolicy, policyRoles } from './emit/shared/modules.js'
+import { tenancyConfig } from './emit/shared/tenancy.js'
 
 export function generateOpenApi(graph) {
+  const tenancy = tenancyConfig(graph)
   const spec = {
     openapi: '3.1.0',
     info: {
@@ -26,7 +28,7 @@ export function generateOpenApi(graph) {
   }
 
   for (const entity of graph.entities) {
-    spec.components.schemas[entity.id] = entitySchema(entity, { includeGenerated: true })
+    spec.components.schemas[entity.id] = entitySchema(entity, { includeGenerated: true, tenancy })
     spec.components.schemas[`${entity.id}Input`] = entitySchema(entity, { includeGenerated: false })
     spec.components.schemas[`${entity.id}Patch`] = entitySchema(entity, { includeGenerated: false, partial: true })
   }
@@ -58,18 +60,18 @@ export function generateOpenApi(graph) {
 
     if (list || create) {
       spec.paths[collectionPath] ||= {}
-      if (list) spec.paths[collectionPath].get = listOperation(entity, list)
-      if (create) spec.paths[collectionPath].post = createOperation(entity, create)
+      if (list) spec.paths[collectionPath].get = listOperation(entity, list, tenancy)
+      if (create) spec.paths[collectionPath].post = createOperation(entity, create, tenancy)
     }
     if (get || update || remove) {
       spec.paths[itemPath] ||= {}
-      if (get) spec.paths[itemPath].get = getOperation(entity, get)
-      if (update) spec.paths[itemPath].put = updateOperation(entity, update)
-      if (remove) spec.paths[itemPath].delete = deleteOperation(entity, remove)
+      if (get) spec.paths[itemPath].get = getOperation(entity, get, tenancy)
+      if (update) spec.paths[itemPath].put = updateOperation(entity, update, tenancy)
+      if (remove) spec.paths[itemPath].delete = deleteOperation(entity, remove, tenancy)
     }
     if (subscribe) {
       spec.paths[`/api/${base}/stream`] = {
-        get: subscribeOperation(entity, subscribe),
+        get: subscribeOperation(entity, subscribe, tenancy),
       }
     }
   }
@@ -101,6 +103,7 @@ function entitySchema(entity, opts = {}) {
   const required = []
   if (opts.includeGenerated) {
     properties.id = { type: 'integer' }
+    if (opts.tenancy) properties.tenantId = { type: 'string' }
     properties.createdAt = { type: 'string', format: 'date-time' }
   }
   for (const field of entity.fields || []) {
@@ -125,8 +128,8 @@ function titled(field, schema) {
   return { ...schema, title: field.label }
 }
 
-function listOperation(entity, action) {
-  return secure(action, false, {
+function listOperation(entity, action, tenancy) {
+  return tenanted(secure(action, false, {
     tags: [entity.id],
     operationId: action.id,
     summary: `List ${entity.id} records`,
@@ -137,11 +140,11 @@ function listOperation(entity, action) {
       }),
       403: errorResponse(),
     },
-  })
+  }), tenancy)
 }
 
-function createOperation(entity, action) {
-  return secure(action, true, {
+function createOperation(entity, action, tenancy) {
+  return tenanted(secure(action, true, {
     tags: [entity.id],
     operationId: action.id,
     summary: `Create ${entity.id}`,
@@ -151,11 +154,11 @@ function createOperation(entity, action) {
       400: errorResponse(),
       403: errorResponse(),
     },
-  })
+  }), tenancy)
 }
 
-function getOperation(entity, action) {
-  return secure(action, false, {
+function getOperation(entity, action, tenancy) {
+  return tenanted(secure(action, false, {
     tags: [entity.id],
     operationId: action.id,
     summary: `Get ${entity.id}`,
@@ -165,11 +168,11 @@ function getOperation(entity, action) {
       403: errorResponse(),
       404: errorResponse(),
     },
-  })
+  }), tenancy)
 }
 
-function updateOperation(entity, action) {
-  return secure(action, true, {
+function updateOperation(entity, action, tenancy) {
+  return tenanted(secure(action, true, {
     tags: [entity.id],
     operationId: action.id,
     summary: `Update ${entity.id}`,
@@ -181,11 +184,11 @@ function updateOperation(entity, action) {
       403: errorResponse(),
       404: errorResponse(),
     },
-  })
+  }), tenancy)
 }
 
-function deleteOperation(entity, action) {
-  return secure(action, true, {
+function deleteOperation(entity, action, tenancy) {
+  return tenanted(secure(action, true, {
     tags: [entity.id],
     operationId: action.id,
     summary: `Delete ${entity.id}`,
@@ -198,11 +201,11 @@ function deleteOperation(entity, action) {
       403: errorResponse(),
       404: errorResponse(),
     },
-  })
+  }), tenancy)
 }
 
-function subscribeOperation(entity, action) {
-  return secure(action, false, {
+function subscribeOperation(entity, action, tenancy) {
+  return tenanted(secure(action, false, {
     tags: [entity.id],
     operationId: action.id,
     summary: `Subscribe to ${entity.id} records`,
@@ -217,7 +220,7 @@ function subscribeOperation(entity, action) {
       },
       403: errorResponse(),
     },
-  })
+  }), tenancy)
 }
 
 function secure(action, csrf, operation) {
@@ -229,6 +232,18 @@ function secure(action, csrf, operation) {
   }
   if (csrf) secured.parameters = [...(operation.parameters || []), csrfParam()]
   return secured
+}
+
+function tenanted(operation, tenancy) {
+  if (!tenancy) return operation
+  return {
+    ...operation,
+    parameters: [...(operation.parameters || []), tenantParam(tenancy)],
+    responses: {
+      ...operation.responses,
+      400: operation.responses?.[400] || errorResponse(),
+    },
+  }
 }
 
 function jsonRequest(schema) {
@@ -279,6 +294,15 @@ function idParam() {
 function csrfParam() {
   return {
     name: 'X-CSRF-Token',
+    in: 'header',
+    required: true,
+    schema: { type: 'string' },
+  }
+}
+
+function tenantParam(tenancy) {
+  return {
+    name: tenancy.header,
     in: 'header',
     required: true,
     schema: { type: 'string' },

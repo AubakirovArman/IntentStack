@@ -1,5 +1,6 @@
 import { ENTITY_ACTIONS } from '../../registry.js'
 import { hasActionAuth, hasPageAuth, isActivePolicy, roleLiteral } from '../../emit/shared/modules.js'
+import { tenancyConfig } from '../../emit/shared/tenancy.js'
 import { BANNER } from './constants.js'
 
 export function apiRoutes(graph) {
@@ -49,7 +50,7 @@ export async function GET(req: Request) {
     if (!a.entity || !ENTITY_ACTIONS.includes(a.type)) continue
     ;(byEntity[a.entity] ||= []).push(a)
   }
-  const opts = { useAuth: hasActionAuth(graph.actions), useWorkflows: (graph.workflows || []).length > 0 }
+  const opts = { useAuth: hasActionAuth(graph.actions), useWorkflows: (graph.workflows || []).length > 0, tenancy: tenancyConfig(graph) }
   for (const [eid, actions] of Object.entries(byEntity)) {
     const e = graph.getEntity(eid)
     if (!e) continue
@@ -71,28 +72,35 @@ export async function GET(req: Request) {
 
 function collectionRoute(tname, types, actions, opts) {
   const action = (type) => actions.find((a) => a.type === type)
+  const drizzleImports = ['desc']
+  if (opts.tenancy && types.has('list_records')) drizzleImports.push('eq')
+  const tenantWhere = opts.tenancy ? `.where(eq(${tname}.tenantId, tenant))` : ''
+  const getNeedsReq = isActivePolicy(action('list_records')?.auth) || opts.tenancy
   let out = BANNER + `import { db, ensureMigrated } from '@/lib/db/client'
 import { ${tname} } from '@/lib/db/schema'
-import { desc } from 'drizzle-orm'
+import { ${drizzleImports.join(', ')} } from 'drizzle-orm'
 import { ${tname}CreateSchema } from '@/lib/validators/${tname}'
 ${opts.useAuth ? `import { assertRequestRole } from '@/lib/auth'\n` : ''}${opts.useWorkflows ? `import { runWorkflows } from '@/lib/workflows'\n` : ''}
+${tenantHelpers(opts)}
 `
   if (types.has('list_records')) out += `
-export async function GET(${isActivePolicy(action('list_records')?.auth) ? 'req: Request' : ''}) {
+export async function GET(${getNeedsReq ? 'req: Request' : ''}) {
 ${nextAuthGuard(action('list_records'), 'req')}
+${nextTenantGuard(opts, 'req')}
   await ensureMigrated()
-  const rows = await db.select().from(${tname}).orderBy(desc(${tname}.createdAt))
+  const rows = await db.select().from(${tname})${tenantWhere}.orderBy(desc(${tname}.createdAt))
   return Response.json({ data: rows })
 }
 `
   if (types.has('create_record')) out += `
 export async function POST(req: Request) {
 ${nextAuthGuard(action('create_record'), 'req')}
+${nextTenantGuard(opts, 'req')}
   await ensureMigrated()
   const body = await req.json().catch(() => null)
   const parsed = ${tname}CreateSchema.safeParse(body)
   if (!parsed.success) return Response.json({ error: 'validation', details: parsed.error.flatten() }, { status: 400 })
-  const result = await db.insert(${tname}).values({ ...parsed.data, createdAt: new Date() }).returning()
+  const result = await db.insert(${tname}).values({ ...parsed.data${opts.tenancy ? ', tenantId: tenant' : ''}, createdAt: new Date() }).returning()
 ${nextWorkflowCall(opts, action('create_record'), 'result[0]')}
   return Response.json({ data: result[0] }, { status: 201 })
 }
@@ -101,10 +109,13 @@ ${nextWorkflowCall(opts, action('create_record'), 'result[0]')}
 }
 
 function itemRoute(tname, types, actions, opts) {
+  const idWhere = opts.tenancy
+    ? `and(eq(${tname}.id, Number(params.id)), eq(${tname}.tenantId, tenant))`
+    : `eq(${tname}.id, Number(params.id))`
   const imports = [
     `import { db, ensureMigrated } from '@/lib/db/client'`,
     `import { ${tname} } from '@/lib/db/schema'`,
-    `import { eq } from 'drizzle-orm'`,
+    `import { eq${opts.tenancy ? ', and' : ''} } from 'drizzle-orm'`,
   ]
   if (types.has('update_record')) imports.push(`import { ${tname}CreateSchema } from '@/lib/validators/${tname}'`)
   if (opts.useAuth) imports.push(`import { assertRequestRole } from '@/lib/auth'`)
@@ -113,12 +124,14 @@ function itemRoute(tname, types, actions, opts) {
   let out = BANNER + imports.join('\n') + `
 
 type Ctx = { params: { id: string } }
+${tenantHelpers(opts)}
 `
   if (types.has('get_record')) out += `
 export async function GET(_req: Request, { params }: Ctx) {
 ${nextAuthGuard(action('get_record'), '_req')}
+${nextTenantGuard(opts, '_req')}
   await ensureMigrated()
-  const rows = await db.select().from(${tname}).where(eq(${tname}.id, Number(params.id)))
+  const rows = await db.select().from(${tname}).where(${idWhere})
   if (rows.length === 0) return Response.json({ error: 'not_found' }, { status: 404 })
   return Response.json({ data: rows[0] })
 }
@@ -126,11 +139,12 @@ ${nextAuthGuard(action('get_record'), '_req')}
   if (types.has('update_record')) out += `
 export async function PUT(req: Request, { params }: Ctx) {
 ${nextAuthGuard(action('update_record'), 'req')}
+${nextTenantGuard(opts, 'req')}
   await ensureMigrated()
   const body = await req.json().catch(() => null)
   const parsed = ${tname}CreateSchema.partial().safeParse(body)
   if (!parsed.success) return Response.json({ error: 'validation', details: parsed.error.flatten() }, { status: 400 })
-  const result = await db.update(${tname}).set(parsed.data).where(eq(${tname}.id, Number(params.id))).returning()
+  const result = await db.update(${tname}).set(parsed.data).where(${idWhere}).returning()
   if (result.length === 0) return Response.json({ error: 'not_found' }, { status: 404 })
 ${nextWorkflowCall(opts, action('update_record'), 'result[0]')}
   return Response.json({ data: result[0] })
@@ -139,8 +153,9 @@ ${nextWorkflowCall(opts, action('update_record'), 'result[0]')}
   if (types.has('delete_record')) out += `
 export async function DELETE(_req: Request, { params }: Ctx) {
 ${nextAuthGuard(action('delete_record'), '_req')}
+${nextTenantGuard(opts, '_req')}
   await ensureMigrated()
-  await db.delete(${tname}).where(eq(${tname}.id, Number(params.id)))
+  await db.delete(${tname}).where(${idWhere})
 ${nextWorkflowCall(opts, action('delete_record'), '{ id: Number(params.id) }')}
   return Response.json({ ok: true })
 }
@@ -150,21 +165,23 @@ ${nextWorkflowCall(opts, action('delete_record'), '{ id: Number(params.id) }')}
 
 function streamRoute(tname, actions, opts) {
   const action = actions.find((a) => a.type === 'subscribe_records')
+  const tenantWhere = opts.tenancy ? `.where(eq(${tname}.tenantId, tenant))` : ''
   return BANNER + `import { db, ensureMigrated } from '@/lib/db/client'
 import { ${tname} } from '@/lib/db/schema'
-import { desc } from 'drizzle-orm'
+import { desc${opts.tenancy ? ', eq' : ''} } from 'drizzle-orm'
 ${opts.useAuth ? `import { assertRequestRole } from '@/lib/auth'\n` : ''}
 export const dynamic = 'force-dynamic'
+${tenantHelpers(opts)}
 
 export async function GET(req: Request) {
-${nextAuthGuard(action, 'req')}  await ensureMigrated()
+${nextAuthGuard(action, 'req')}${nextTenantGuard(opts, 'req')}  await ensureMigrated()
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     start(controller) {
       let closed = false
       async function send() {
         if (closed) return
-        const rows = await db.select().from(${tname}).orderBy(desc(${tname}.createdAt))
+        const rows = await db.select().from(${tname})${tenantWhere}.orderBy(desc(${tname}.createdAt))
         controller.enqueue(encoder.encode(\`event: records\\ndata: \${JSON.stringify({ data: rows })}\\n\\n\`))
       }
       void send()
@@ -184,6 +201,28 @@ ${nextAuthGuard(action, 'req')}  await ensureMigrated()
     },
   })
 }
+`
+}
+
+function tenantHelpers(opts) {
+  if (!opts.tenancy) return ''
+  return `
+function readTenant(req: Request) {
+  const url = new URL(req.url)
+  const value = req.headers.get(${JSON.stringify(opts.tenancy.header)}) || url.searchParams.get('tenant_id') || ''
+  return value.trim()
+}
+
+function tenantError() {
+  return Response.json({ error: 'tenant_required', header: ${JSON.stringify(opts.tenancy.header)} }, { status: 400 })
+}
+`
+}
+
+function nextTenantGuard(opts, reqName) {
+  if (!opts.tenancy) return ''
+  return `  const tenant = readTenant(${reqName})
+  if (!tenant) return tenantError()
 `
 }
 

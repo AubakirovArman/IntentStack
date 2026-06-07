@@ -2,12 +2,14 @@
 import { BANNER_TS } from './util.js'
 import { ENTITY_ACTIONS } from '../registry.js'
 import { hasActionAuth, hasPageAuth, honoAuthTs, integrationsTs, isActivePolicy, roleLiteral, workflowsTs } from './shared/modules.js'
+import { tenancyConfig } from './shared/tenancy.js'
 
 export function emitBackend(graph) {
   const files = {}
   const recordActions = graph.actions.filter((a) => ENTITY_ACTIONS.includes(a.type))
   const useAuth = hasActionAuth(recordActions) || hasPageAuth(graph)
   const useWorkflows = (graph.workflows || []).length > 0
+  const tenancy = tenancyConfig(graph)
   const byEntity = {}
   for (const a of recordActions) {
     if (!a.entity) continue
@@ -24,7 +26,7 @@ export function emitBackend(graph) {
     const e = graph.getEntity(entityId)
     if (!e) continue
     const fname = e.id.toLowerCase()
-    files[`server/generated/routes/${fname}.ts`] = routeTs(e, acts, { useAuth, useWorkflows })
+    files[`server/generated/routes/${fname}.ts`] = routeTs(e, acts, { useAuth, useWorkflows, tenancy })
     imports.push(`import ${fname}Routes from './generated/routes/${fname}'`)
     mounts.push(`app.route('/api', ${fname}Routes)`)
   }
@@ -126,28 +128,41 @@ function routeTs(entity, actions, opts) {
   const has = (type) => actions.some((a) => a.type === type)
   const action = (type) => actions.find((a) => a.type === type)
   const hasSubscribe = has('subscribe_records')
+  const tenant = opts.tenancy
+  const tenantWhere = tenant ? `.where(eq(${t}.tenantId, tenant))` : ''
+  const idWhere = (idExpr = 'id') => tenant ? `and(eq(${t}.id, ${idExpr}), eq(${t}.tenantId, tenant))` : `eq(${t}.id, ${idExpr})`
 
   let out = BANNER_TS + `import { Hono } from 'hono'
 ${hasSubscribe ? `import { streamSSE } from 'hono/streaming'\n` : ''}import { db } from '../db/client'
 import { ${t} } from '../db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc${tenant ? ', and' : ''} } from 'drizzle-orm'
 import { ${t}CreateSchema } from '../validators/${t}'
 ${opts.useAuth ? `import { assertRole } from '../auth'\n` : ''}${opts.useWorkflows ? `import { runWorkflows } from '../workflows'\n` : ''}
 
 const r = new Hono()
+${tenant ? `
+function readTenant(c: any) {
+  const value = c.req.header(${JSON.stringify(tenant.header)}) || c.req.query('tenant_id') || ''
+  return String(value).trim()
+}
+
+function tenantError(c: any) {
+  return c.json({ error: 'tenant_required', header: ${JSON.stringify(tenant.header)} }, 400)
+}
+` : ''}
 `
   if (has('list_records')) out += `
 r.get('/${base}', async (c) => {
 ${authGuard(action('list_records'))}
-  const rows = await db.select().from(${t}).orderBy(desc(${t}.createdAt))
+${tenantGuard(tenant, 'c')}  const rows = await db.select().from(${t})${tenantWhere}.orderBy(desc(${t}.createdAt))
   return c.json({ data: rows })
 })
 `
   if (has('get_record')) out += `
 r.get('/${base}/:id', async (c) => {
 ${authGuard(action('get_record'))}
-  const id = Number(c.req.param('id'))
-  const rows = await db.select().from(${t}).where(eq(${t}.id, id))
+${tenantGuard(tenant, 'c')}  const id = Number(c.req.param('id'))
+  const rows = await db.select().from(${t}).where(${idWhere()})
   if (rows.length === 0) return c.json({ error: 'not_found' }, 404)
   return c.json({ data: rows[0] })
 })
@@ -155,10 +170,10 @@ ${authGuard(action('get_record'))}
   if (has('create_record')) out += `
 r.post('/${base}', async (c) => {
 ${authGuard(action('create_record'))}
-  const body = await c.req.json().catch(() => null)
+${tenantGuard(tenant, 'c')}  const body = await c.req.json().catch(() => null)
   const parsed = ${t}CreateSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'validation', details: parsed.error.flatten() }, 400)
-  const result = await db.insert(${t}).values({ ...parsed.data, createdAt: new Date() }).returning()
+  const result = await db.insert(${t}).values({ ...parsed.data${tenant ? ', tenantId: tenant' : ''}, createdAt: new Date() }).returning()
 ${workflowCall(opts, action('create_record'), 'result[0]')}
   return c.json({ data: result[0] }, 201)
 })
@@ -166,11 +181,11 @@ ${workflowCall(opts, action('create_record'), 'result[0]')}
   if (has('update_record')) out += `
 r.put('/${base}/:id', async (c) => {
 ${authGuard(action('update_record'))}
-  const id = Number(c.req.param('id'))
+${tenantGuard(tenant, 'c')}  const id = Number(c.req.param('id'))
   const body = await c.req.json().catch(() => null)
   const parsed = ${t}CreateSchema.partial().safeParse(body)
   if (!parsed.success) return c.json({ error: 'validation', details: parsed.error.flatten() }, 400)
-  const result = await db.update(${t}).set(parsed.data).where(eq(${t}.id, id)).returning()
+  const result = await db.update(${t}).set(parsed.data).where(${idWhere()}).returning()
   if (result.length === 0) return c.json({ error: 'not_found' }, 404)
 ${workflowCall(opts, action('update_record'), 'result[0]')}
   return c.json({ data: result[0] })
@@ -179,8 +194,8 @@ ${workflowCall(opts, action('update_record'), 'result[0]')}
   if (has('delete_record')) out += `
 r.delete('/${base}/:id', async (c) => {
 ${authGuard(action('delete_record'))}
-  const id = Number(c.req.param('id'))
-  await db.delete(${t}).where(eq(${t}.id, id))
+${tenantGuard(tenant, 'c')}  const id = Number(c.req.param('id'))
+  await db.delete(${t}).where(${idWhere()})
 ${workflowCall(opts, action('delete_record'), '{ id }')}
   return c.json({ ok: true })
 })
@@ -188,9 +203,9 @@ ${workflowCall(opts, action('delete_record'), '{ id }')}
   if (hasSubscribe) out += `
 r.get('/${base}/stream', async (c) => {
 ${authGuard(action('subscribe_records'))}
-  return streamSSE(c, async (stream) => {
+${tenantGuard(tenant, 'c')}  return streamSSE(c, async (stream) => {
     while (true) {
-      const rows = await db.select().from(${t}).orderBy(desc(${t}.createdAt))
+      const rows = await db.select().from(${t})${tenantWhere}.orderBy(desc(${t}.createdAt))
       await stream.writeSSE({ event: 'records', data: JSON.stringify({ data: rows }) })
       await stream.sleep(2000)
     }
@@ -205,6 +220,13 @@ function authGuard(action) {
   if (!action || !isActivePolicy(action.auth)) return ''
   return `  const auth = assertRole(c, ${roleLiteral(action.auth)})
   if (auth) return auth
+`
+}
+
+function tenantGuard(tenant, cName) {
+  if (!tenant) return ''
+  return `  const tenant = readTenant(${cName})
+  if (!tenant) return tenantError(${cName})
 `
 }
 

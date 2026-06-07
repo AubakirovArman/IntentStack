@@ -85,6 +85,21 @@ export function intentSchema() {
           },
         ],
       },
+      tenancy: {
+        anyOf: [
+          { const: false },
+          {
+            type: 'object',
+            additionalProperties: true,
+            required: ['enabled'],
+            properties: {
+              enabled: { const: true },
+              header: { type: 'string', minLength: 1 },
+              storage_key: { type: 'string', minLength: 1 },
+            },
+          },
+        ],
+      },
       entities: {
         type: 'array',
         items: {

@@ -23,6 +23,7 @@ export function schemaBody(graph) {
   for (const e of graph.entities) {
     out += `\nexport const ${e.id.toLowerCase()} = sqliteTable(${q(e.table || e.id.toLowerCase())}, {\n`
     out += `  id: integer('id').primaryKey({ autoIncrement: true }),\n`
+    if (graph.tenancy?.enabled === true) out += `  tenantId: text('tenant_id').notNull(),\n`
     for (const f of e.fields || []) {
       let line = `  ${f.id}: ` + (DRIZZLE[f.type] || DRIZZLE.string)(f)
       if (f.required) line += `.notNull()`
@@ -40,6 +41,7 @@ export function migrationSql(graph) {
   for (const e of graph.entities) {
     out += `CREATE TABLE IF NOT EXISTS ${e.table || e.id.toLowerCase()} (\n`
     const lines = ['  id integer PRIMARY KEY AUTOINCREMENT NOT NULL']
+    if (graph.tenancy?.enabled === true) lines.push('  tenant_id text NOT NULL')
     for (const f of e.fields || []) {
       let l = `  ${col(f.id)} ${SQLTYPE[f.type] || 'text'}`
       if (f.default !== undefined) l += ` DEFAULT ${typeof f.default === 'string' ? `'${f.default}'` : f.default}`

@@ -41,6 +41,7 @@ test('schema command exposes the DSL JSON Schema', () => {
   const schema = JSON.parse(res.stdout)
   assert.equal(schema.title, 'IntentStack Intent DSL v0.1')
   assert.ok(schema.properties.navigation)
+  assert.ok(schema.properties.tenancy)
   assert.ok(schema.properties.actions.items.properties.type.enum.includes('update_record'))
   assert.ok(schema.properties.actions.items.properties.type.enum.includes('subscribe_records'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.type.enum.includes('content'))
@@ -223,6 +224,9 @@ auth:
     - id: admin
       role: admin
       password: env:ADMIN_PASSWORD
+tenancy:
+  enabled: true
+  header: X-Org-Id
 entities:
   - id: Lead
     fields:
@@ -255,9 +259,13 @@ pages:
     const data = JSON.parse(res.stdout)
     assert.deepEqual(data.paths['/api/lead'].get.security, [{ intentstackSession: [] }])
     assert.deepEqual(data.paths['/api/lead'].get['x-intentstack-roles'], ['admin'])
-    assert.equal(data.paths['/api/lead'].get.parameters, undefined)
+    assert.equal(data.components.schemas.Lead.properties.tenantId.type, 'string')
+    assert.ok(data.paths['/api/lead'].get.parameters.some((item) => item.name === 'X-Org-Id'))
+    assert.ok(!data.paths['/api/lead'].get.parameters.some((item) => item.name === 'X-CSRF-Token'))
+    assert.ok(data.paths['/api/lead'].post.parameters.some((item) => item.name === 'X-Org-Id'))
     assert.ok(data.paths['/api/lead'].post.parameters.some((item) => item.name === 'X-CSRF-Token'))
     assert.equal(data.paths['/api/lead/stream'].get.operationId, 'subscribe_leads')
+    assert.ok(data.paths['/api/lead/stream'].get.parameters.some((item) => item.name === 'X-Org-Id'))
     assert.equal(data.paths['/api/lead/stream'].get.responses[200].content['text/event-stream'].schema.type, 'string')
     assert.ok(data.paths['/api/auth/login'].post)
   } finally {
@@ -279,6 +287,51 @@ test('testgen writes generated API contract tests', () => {
     assert.match(testFile, /INTENTSTACK_RUN_MUTATION_TESTS/)
     assert.match(testFile, /INTENTSTACK_TEST_LEAD_ID/)
     assert.match(readme, /Operations generated: 6/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('testgen documents multi-tenant contract requirements', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-testgen-tenant-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: tenant_contract
+  target: web_ts_minimal
+tenancy:
+  enabled: true
+  header: X-Org-Id
+entities:
+  - id: Lead
+    fields:
+      - id: name
+        type: string
+actions:
+  - id: list_leads
+    type: list_records
+    entity: Lead
+  - id: subscribe_leads
+    type: subscribe_records
+    entity: Lead
+pages:
+  - id: home
+    path: /
+    sections:
+      - id: hero
+        type: hero
+        title: Home
+`)
+    const out = join(dir, 'generated-tests')
+    const res = run(['testgen', '--project', dir, '--out', out])
+    assert.equal(res.status, 0, res.stderr)
+    const testFile = readFileSync(join(out, 'api-contract.test.mjs'), 'utf8')
+    const readme = readFileSync(join(out, 'README.md'), 'utf8')
+    assert.match(testFile, /INTENTSTACK_TEST_TENANT_ID/)
+    assert.match(testFile, /"tenantHeader": "X-Org-Id"/)
+    assert.match(testFile, /url\.searchParams\.set\('tenant_id', TENANT_ID\)/)
+    assert.match(readme, /Multi-tenant endpoints require `INTENTSTACK_TEST_TENANT_ID`/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

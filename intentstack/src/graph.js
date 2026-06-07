@@ -11,6 +11,7 @@ export function buildGraph(ast) {
   const actions = ast.actions || []
   const pages = ast.pages || []
   const auth = ast.auth || null
+  const tenancy = ast.tenancy || null
   const navigation = ast.navigation || null
   const workflows = ast.workflows || []
   const integrations = ast.integrations || []
@@ -45,6 +46,7 @@ export function buildGraph(ast) {
     actions,
     pages,
     auth,
+    tenancy,
     navigation,
     workflows,
     integrations,

@@ -110,6 +110,51 @@ test('next_shadcn emits only stream route for subscribe-only actions', () => {
   assert.match(files['lib/api/client.ts'], /subscribeLead/)
 })
 
+function tenantIntent(target) {
+  return {
+    version: '0.1',
+    project: { id: 'tenant_app', target },
+    tenancy: { enabled: true, header: 'X-Org-Id', storage_key: 'tenant.org_id' },
+    entities: [{ id: 'Lead', table: 'leads', fields: [{ id: 'name', type: 'string', required: true }] }],
+    actions: [
+      { id: 'list_leads', type: 'list_records', entity: 'Lead' },
+      { id: 'create_lead', type: 'create_record', entity: 'Lead' },
+      { id: 'get_lead', type: 'get_record', entity: 'Lead' },
+      { id: 'update_lead', type: 'update_record', entity: 'Lead' },
+      { id: 'delete_lead', type: 'delete_record', entity: 'Lead' },
+      { id: 'subscribe_leads', type: 'subscribe_records', entity: 'Lead' },
+    ],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  }
+}
+
+test('multi-tenant apps scope generated schema, APIs and clients for both targets', () => {
+  const webFiles = planFiles(buildGraph(tenantIntent('web_ts_minimal')))
+  assert.match(webFiles['server/generated/db/schema.ts'], /tenantId: text\('tenant_id'\)\.notNull\(\)/)
+  assert.match(webFiles['migrations/0000_init.sql'], /tenant_id text NOT NULL/)
+  assert.match(webFiles['server/generated/routes/lead.ts'], /tenant_required/)
+  assert.match(webFiles['server/generated/routes/lead.ts'], /header: "X-Org-Id"/)
+  assert.match(webFiles['server/generated/routes/lead.ts'], /where\(eq\(lead\.tenantId, tenant\)\)/)
+  assert.match(webFiles['server/generated/routes/lead.ts'], /and\(eq\(lead\.id, id\), eq\(lead\.tenantId, tenant\)\)/)
+  assert.match(webFiles['server/generated/routes/lead.ts'], /tenantId: tenant/)
+  assert.match(webFiles['src/generated/api/client.ts'], /window\.localStorage\.getItem\("tenant\.org_id"\)/)
+  assert.match(webFiles['src/generated/api/client.ts'], /"X-Org-Id": tenant/)
+  assert.match(webFiles['src/generated/api/client.ts'], /tenant_id=/)
+
+  const nextFiles = planFiles(buildGraph(tenantIntent('next_shadcn')))
+  assert.match(nextFiles['lib/db/schema.ts'], /tenantId: text\('tenant_id'\)\.notNull\(\)/)
+  assert.match(nextFiles['migrations/0000_init.sql'], /tenant_id text NOT NULL/)
+  assert.match(nextFiles['app/api/leads/route.ts'], /tenant_required/)
+  assert.match(nextFiles['app/api/leads/route.ts'], /req\.headers\.get\("X-Org-Id"\)/)
+  assert.match(nextFiles['app/api/leads/route.ts'], /where\(eq\(lead\.tenantId, tenant\)\)/)
+  assert.match(nextFiles['app/api/leads/route.ts'], /tenantId: tenant/)
+  assert.match(nextFiles['app/api/leads/[id]/route.ts'], /and\(eq\(lead\.id, Number\(params\.id\)\), eq\(lead\.tenantId, tenant\)\)/)
+  assert.match(nextFiles['app/api/leads/stream/route.ts'], /where\(eq\(lead\.tenantId, tenant\)\)/)
+  assert.match(nextFiles['lib/api/client.ts'], /window\.localStorage\.getItem\("tenant\.org_id"\)/)
+  assert.match(nextFiles['lib/api/client.ts'], /"X-Org-Id": tenant/)
+  assert.match(nextFiles['lib/api/client.ts'], /tenant_id=/)
+})
+
 function docsIntent(target) {
   return {
     version: '0.1',

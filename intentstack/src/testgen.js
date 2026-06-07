@@ -1,4 +1,5 @@
 import { ENTITY_ACTIONS } from './registry.js'
+import { tenancyConfig } from './emit/shared/tenancy.js'
 
 export function generateTestFiles(graph) {
   const operations = apiOperations(graph)
@@ -9,6 +10,7 @@ export function generateTestFiles(graph) {
 }
 
 function apiOperations(graph) {
+  const tenancy = tenancyConfig(graph)
   const out = [
     { action: 'health', method: 'GET', path: '/api/health', entity: 'Observability', idEnv: '', mutation: false, body: null, expected: [200], auth: false },
     { action: 'metrics', method: 'GET', path: '/api/metrics', entity: 'Observability', idEnv: '', mutation: false, body: null, expected: [200], auth: false },
@@ -29,12 +31,12 @@ function apiOperations(graph) {
     const update = action('update_record')
     const remove = action('delete_record')
     const subscribe = action('subscribe_records')
-    if (list) out.push(operation(list, 'GET', `/api/${base}`, entity, { expected: [200] }))
-    if (create) out.push(operation(create, 'POST', `/api/${base}`, entity, { mutation: true, body: samplePayload(entity), expected: [200, 201] }))
-    if (get) out.push(operation(get, 'GET', `/api/${base}/{id}`, entity, { id: true, expected: [200, 404] }))
-    if (update) out.push(operation(update, 'PUT', `/api/${base}/{id}`, entity, { id: true, mutation: true, body: samplePayload(entity, { partial: true }), expected: [200, 404] }))
-    if (remove) out.push(operation(remove, 'DELETE', `/api/${base}/{id}`, entity, { id: true, mutation: true, expected: [200, 404] }))
-    if (subscribe) out.push(operation(subscribe, 'GET', `/api/${base}/stream`, entity, { expected: [200] }))
+    if (list) out.push(operation(list, 'GET', `/api/${base}`, entity, { expected: [200], tenancy }))
+    if (create) out.push(operation(create, 'POST', `/api/${base}`, entity, { mutation: true, body: samplePayload(entity), expected: [200, 201], tenancy }))
+    if (get) out.push(operation(get, 'GET', `/api/${base}/{id}`, entity, { id: true, expected: [200, 404], tenancy }))
+    if (update) out.push(operation(update, 'PUT', `/api/${base}/{id}`, entity, { id: true, mutation: true, body: samplePayload(entity, { partial: true }), expected: [200, 404], tenancy }))
+    if (remove) out.push(operation(remove, 'DELETE', `/api/${base}/{id}`, entity, { id: true, mutation: true, expected: [200, 404], tenancy }))
+    if (subscribe) out.push(operation(subscribe, 'GET', `/api/${base}/stream`, entity, { expected: [200], tenancy, stream: true }))
   }
   return out
 }
@@ -50,6 +52,9 @@ function operation(action, method, path, entity, opts = {}) {
     body: opts.body || null,
     expected: opts.expected || [200],
     auth: Boolean(action.auth && action.auth !== 'reserved'),
+    tenancy: Boolean(opts.tenancy),
+    tenantHeader: opts.tenancy?.header || '',
+    stream: opts.stream === true,
   }
 }
 
@@ -62,6 +67,7 @@ import assert from 'node:assert/strict'
 const BASE_URL = process.env.INTENTSTACK_BASE_URL || ${JSON.stringify(defaultBaseUrl)}
 const AUTH_TOKEN = process.env.INTENTSTACK_AUTH_TOKEN || ''
 const CSRF_TOKEN = process.env.INTENTSTACK_CSRF_TOKEN || ''
+const TENANT_ID = process.env.INTENTSTACK_TEST_TENANT_ID || ''
 const RUN_MUTATIONS = process.env.INTENTSTACK_RUN_MUTATION_TESTS === 'true'
 const OPERATIONS = ${JSON.stringify(operations, null, 2)}
 
@@ -70,16 +76,20 @@ function headers(op) {
   if (AUTH_TOKEN) out.Authorization = \`Bearer \${AUTH_TOKEN}\`
   if (op.body) out['Content-Type'] = 'application/json'
   if (op.mutation && CSRF_TOKEN) out['X-CSRF-Token'] = CSRF_TOKEN
+  if (op.tenancy && TENANT_ID) out[op.tenantHeader] = TENANT_ID
   return out
 }
 
 function operationUrl(op) {
   const id = process.env[op.idEnv] || process.env.INTENTSTACK_TEST_RECORD_ID || ''
-  return new URL(op.path.replace('{id}', encodeURIComponent(id)), BASE_URL).toString()
+  const url = new URL(op.path.replace('{id}', encodeURIComponent(id)), BASE_URL)
+  if (op.tenancy && op.stream && TENANT_ID) url.searchParams.set('tenant_id', TENANT_ID)
+  return url.toString()
 }
 
 function skipReason(op) {
   if (op.mutation && !RUN_MUTATIONS) return 'set INTENTSTACK_RUN_MUTATION_TESTS=true to run mutating contract tests'
+  if (op.tenancy && !TENANT_ID) return 'set INTENTSTACK_TEST_TENANT_ID'
   if (op.path.includes('{id}') && !(process.env[op.idEnv] || process.env.INTENTSTACK_TEST_RECORD_ID)) return \`set \${op.idEnv} or INTENTSTACK_TEST_RECORD_ID\`
   return null
 }
@@ -108,6 +118,7 @@ for (const op of OPERATIONS) {
 function testReadme(graph, operations) {
   const defaultBaseUrl = graph.project?.target === 'next_shadcn' ? 'http://localhost:3000' : 'http://localhost:8787'
   const mutationCount = operations.filter((op) => op.mutation).length
+  const hasTenancy = operations.some((op) => op.tenancy)
   return `# Generated IntentStack Tests
 
 Generated from intent project \`${graph.project?.id || 'app'}\`.
@@ -120,6 +131,9 @@ INTENTSTACK_BASE_URL=${defaultBaseUrl} node --test tests/generated/api-contract.
 
 Protected endpoints accept \`INTENTSTACK_AUTH_TOKEN\`. Cookie-auth CSRF flows can pass
 \`INTENTSTACK_CSRF_TOKEN\`.
+${hasTenancy ? `
+Multi-tenant endpoints require \`INTENTSTACK_TEST_TENANT_ID\`.
+` : ''}
 
 Mutating tests are skipped by default. To run them:
 
