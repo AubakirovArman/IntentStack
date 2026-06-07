@@ -213,6 +213,24 @@ pages:
   }
 })
 
+test('testgen writes generated API contract tests', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-testgen-'))
+  try {
+    const out = join(dir, 'generated-tests')
+    const res = run(['testgen', '--project', 'demo', '--out', out])
+    assert.equal(res.status, 0, res.stderr)
+    assert.match(res.stdout, /ok generated tests written/)
+    const testFile = readFileSync(join(out, 'api-contract.test.mjs'), 'utf8')
+    const readme = readFileSync(join(out, 'README.md'), 'utf8')
+    assert.match(testFile, /"method": "GET"[\s\S]*"path": "\/api\/leads"/)
+    assert.match(testFile, /INTENTSTACK_RUN_MUTATION_TESTS/)
+    assert.match(testFile, /INTENTSTACK_TEST_LEAD_ID/)
+    assert.match(readme, /Operations generated: 4/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('verify checks examples across both supported targets', () => {
   const res = run(['verify', '--examples', 'intentstack/examples', '--targets', 'web_ts_minimal,next_shadcn'])
   assert.equal(res.status, 0, res.stderr)

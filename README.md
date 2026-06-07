@@ -86,14 +86,14 @@ The Core IR and the shared data-model codegen (`emit/shared/datamodel.js`) are r
 ## Status / scope (v0.1)
 
 Implemented: `new`, `check`, `build`, `plan`, `diff`, `apply`, `explain`, `doctor`,
-`migrate`, `list_capabilities`, `schema`, `graph`, `openapi`, `stats`, `verify`; two target adapters;
+`migrate`, `list_capabilities`, `schema`, `graph`, `openapi`, `testgen`, `stats`, `verify`; two target adapters;
 entities -> Drizzle schema + SQL migration + zod validators; record actions -> Hono routes /
 Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, `hero`, `card_grid`, `stats`,
 `pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; derived API clients; inline
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; workflow/integration metadata and
-webhook dispatch; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
+webhook dispatch; generated API contract tests; GitHub Actions CI for compiler lint/tests, Rust wrapper tests, and generated app build matrix.
 
 Still partial: Rust compiler core, production sessions/login, durable workflow jobs,
 provider-specific integration clients and a visual editor.

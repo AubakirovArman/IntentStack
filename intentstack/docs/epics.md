@@ -14,9 +14,9 @@ Status legend:
 4. Full patch command set: `done`. The PRD command surface is implemented and exposed through `patchOps()`/`list_capabilities`.
 5. UI component catalog: `done`. `navbar`, `hero`, `card_grid`, `pricing_cards`, `stats`, `form`, `table`, `record_detail`, `footer`, `custom_component` are supported.
 6. CRUD completeness: `done`. CRUD routes and clients are generated; dashboard row actions support detail/edit/delete, and dedicated dynamic record detail pages are generated for both targets.
-7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `openapi`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
+7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `openapi`, `testgen`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
 8. Generated/custom extension model: `done`. `custom_component` validates source/export, validates declared props schemas, and emits wrappers with typed props for both targets.
-9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff and examples x targets verify tests exist; GitHub Actions runs lint, Node tests, Rust tests, and generated app build matrix for both targets.
+9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff, generated API contract tests, and examples x targets verify tests exist; GitHub Actions runs lint, Node tests, Rust tests, and generated app build matrix for both targets.
 10. Docs and AI-agent protocol: `done`. Core docs exist, AGENTS/README are current, and `intentstack docs --out` generates a static documentation site.
 11. Security, verification, metrics: `done`. Validation, safe CRUD basics, secret checks, auth guards, sessions, `verify`, `stats`, and `security` audit gates exist and are tested.
 
@@ -49,3 +49,4 @@ Status legend:
 33. Embedded docs examples: `done`. `example` content blocks can render a live generated section and patch code inside the same docs article block; `embed_only` keeps referenced sections out of standalone page rendering; `content.example.add` inserts these blocks through semantic patches.
 34. OpenAPI generation: `done`. `intentstack openapi` exports OpenAPI 3.1 JSON/YAML from Core IR entities and CRUD record actions, including request/response schemas, item/collection paths, auth cookies, CSRF headers, and CLI tests.
 35. Next adapter modularization: `done`. The `next_shadcn` target now delegates project scaffolding, UI primitives, data layer, API routes, and frontend rendering to focused modules instead of one monolithic adapter file.
+36. Generated test framework: `done`. `intentstack testgen` writes Node `node:test` API contract tests from CRUD record actions, including target-aware base URLs, auth token support, ID-driven item tests, and opt-in mutating tests.

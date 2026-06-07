@@ -19,6 +19,7 @@ import { intentSchema } from './schema.js'
 import { renderGraphHtml } from './visual_graph.js'
 import { generateDocsSite } from './docs_site.js'
 import { formatOpenApi, generateOpenApi, openApiFormat } from './openapi.js'
+import { generateTestFiles } from './testgen.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -339,6 +340,24 @@ async function main() {
     return
   }
 
+  if (cmd === 'testgen') {
+    const { ast } = await loadAst(projectDir, cfg)
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, cfg.out || 'app') })
+    if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
+    const graph = buildGraph(coreAst)
+    const outDir = resolve(projectDir, flag('out', 'tests/generated'))
+    const files = generateTestFiles(graph)
+    for (const [rel, content] of Object.entries(files)) {
+      const outPath = join(outDir, rel)
+      mkdirSync(dirname(outPath), { recursive: true })
+      writeFileSync(outPath, content)
+    }
+    console.log(`ok generated tests written -> ${outDir}`)
+    for (const file of Object.keys(files).sort()) console.log(`  + ${file}`)
+    return
+  }
+
   if (cmd === 'stats') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -558,6 +577,7 @@ function help() {
     '  intentstack doctor  [--project DIR]                             validate environment and plan',
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
+    '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
     '  intentstack stats   [--project DIR] [--json] [--out-stats FILE]  print app/compiler metrics',
     '  intentstack security [--project DIR] [--json] [--strict]          audit security posture',
     '  intentstack docs    [--project DIR] [--out DIR]                  generate static docs site',
