@@ -62,4 +62,12 @@ test('buildGraph consumes normalized Core IR', () => {
     id: 'name',
     ref: 'Entity.Lead.field.name',
   })
+  assert.equal(graph.symbols['Entity.Lead.field.email'].type, 'string')
+  assert.equal(graph.types.sections['Page.home.section.lead_form'].fields.name.ref, 'Entity.Lead.field.name')
+  assert.equal(graph.resolved.actions.create_lead.entity.id, 'Lead')
+  assert.equal(graph.resolved.sections['Page.home.section.lead_form'].submitAction.id, 'create_lead')
+  assert.equal(graph.resolved.sections['Page.home.section.leads_table'].sourceAction.id, 'list_leads')
+  assert.ok(graph.bindings.some((binding) => binding.kind === 'form.submit' && binding.to === 'Action.create_lead'))
+  assert.equal(graph.getField('Lead', 'email').id, 'email')
+  assert.equal(graph.getResolvedSection('home', 'lead_detail').sourceAction.id, 'get_lead')
 })

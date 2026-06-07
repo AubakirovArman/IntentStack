@@ -753,6 +753,13 @@ function graphSummary(graph) {
     })),
     workflows: graph.workflows.map((w) => ({ id: w.id, trigger: w.trigger })),
     integrations: graph.integrations.map((i) => ({ id: i.id, type: i.type })),
+    ir: {
+      symbol_count: graph.symbolTable.length,
+      binding_count: graph.bindings.length,
+      symbols: graph.symbolTable,
+      bindings: graph.bindings,
+      types: graph.types,
+    },
     modules: graph.modules?.modular ? {
       modular: true,
       root_path: graph.modules.rootPath,
