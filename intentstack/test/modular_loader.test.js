@@ -188,3 +188,42 @@ test('loader assembles shared theme navigation and auth modules', async () => {
   assert.match(nextFiles['components/generated/AppNav.tsx'], /Modular Site/)
   assert.match(nextFiles['app/leads/page.tsx'], /<AppNav \/>/)
 })
+
+test('validator diagnostics include module file provenance', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-provenance-'))
+  try {
+    mkdirSync(join(dir, 'intent/frontend/pages'), { recursive: true })
+    mkdirSync(join(dir, 'intent/frontend/sections/docs'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: provenance
+  target: web_ts_minimal
+includes:
+  - frontend/pages/*.yaml
+  - frontend/sections/**/*.yaml
+`)
+    writeFileSync(join(dir, 'intent/frontend/pages/docs.yaml'), `page:
+  id: docs
+  path: /docs
+  sections:
+    - ref: docs_content
+`)
+    writeFileSync(join(dir, 'intent/frontend/sections/docs/content.yaml'), `section:
+  id: docs_content
+  type: content
+  blocks:
+    - id: bad
+      type: quote
+      text: Not supported yet.
+`)
+
+    const { ast } = await loadIntentProject(dir, {})
+    const d = validate(ast)
+    const err = d.errors.find((item) => item.code === 'E2233')
+    assert.ok(err)
+    assert.match(err.file, /frontend[\\/]sections[\\/]docs[\\/]content\.yaml$/)
+    assert.match(d.format(), /file:/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

@@ -19,6 +19,7 @@ export class Diagnostics {
 
 function formatOne(d) {
   let s = `  [${d.severity.toUpperCase()} ${d.code}] ${d.message}`
+  if (d.file) s += `\n      file: ${d.file}`
   if (d.path) s += `\n      at:  ${d.path}`
   if (d.suggestion) s += `\n      hint: ${d.suggestion}`
   if (d.fix_hint) s += `\n      fix:  ${JSON.stringify(d.fix_hint)}`

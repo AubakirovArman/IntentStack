@@ -132,6 +132,13 @@ export function validate(ast, opts = {}) {
     for (const [j, s] of (p.sections || []).entries()) {
       const sp = `${base}.sections[${j}]`
       if (!s.id) { d.error('E2040', 'section.id is required.', { path: sp }); continue }
+      if (s.type === '__missing_ref') {
+        d.error('E2050', `Page "${p.id}" references missing section "${s.id}".`, {
+          path: sp,
+          suggestion: 'Add a section module with that id, or remove the ref from the page module.',
+        })
+        continue
+      }
       if (!s.type) { d.error('E2041', 'section.type is required.', { path: `${sp}.type` }); continue }
       if (target && !target.supported_components.includes(s.type)) {
         const did = closest(s.type, target.supported_components)
@@ -165,6 +172,18 @@ export function validate(ast, opts = {}) {
         suggestion: `Add a page at ${ref.path} with a record_detail section bound to ${ref.entity}.`,
       })
     }
+  }
+  return attachProvenance(d, ast)
+}
+
+function attachProvenance(d, ast) {
+  const pathFiles = ast?.__intentstack?.pathFiles
+  if (!pathFiles) return d
+  const entries = Object.entries(pathFiles).sort((a, b) => b[0].length - a[0].length)
+  for (const item of d.items) {
+    if (item.file || !item.path) continue
+    const match = entries.find(([path]) => item.path === path || item.path.startsWith(`${path}.`))
+    if (match) item.file = match[1]
   }
   return d
 }
