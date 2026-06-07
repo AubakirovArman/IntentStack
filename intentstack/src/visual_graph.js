@@ -1,3 +1,5 @@
+import { intentSuggestions } from './suggestions.js'
+
 const esc = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -23,6 +25,13 @@ export function renderGraphHtml(graph, history = []) {
   const actions = list(graph.actions, (action) => `<li><strong>${esc(action.id)}</strong> <span class="muted">${esc(action.type)} ${esc(action.entity)}</span></li>`)
   const workflows = list(graph.workflows, (workflow) => `<li><strong>${esc(workflow.id)}</strong> <span class="muted">trigger: ${esc(workflow.trigger?.action)}</span></li>`)
   const integrations = list(graph.integrations, (integration) => `<li><strong>${esc(integration.id)}</strong> <span class="muted">${esc(integration.type)}</span></li>`)
+  const suggestions = intentSuggestions(graph)
+  const suggestionCards = suggestions.length ? suggestions.map((item, index) => `<article class="suggestion">
+    <strong>${esc(item.title)}</strong>
+    <p class="muted">${esc(item.reason)}</p>
+    <button type="button" data-suggestion="${index}">Copy suggestion</button>
+    <pre><code>${esc(item.yaml)}</code></pre>
+  </article>`).join('') : '<p class="muted">No suggestions.</p>'
   const moduleOwners = flattenOwners(graph.modules)
   const modules = graph.modules?.modular ? `<p><strong>Root</strong><br /><span class="muted">${esc(graph.modules.root_path)}</span></p>
     <p><strong>Includes</strong></p>
@@ -60,6 +69,7 @@ export function renderGraphHtml(graph, history = []) {
       button { border: 0; border-radius: 6px; padding: 8px 12px; background: #0f172a; color: #fff; cursor: pointer; }
       pre { overflow-x: auto; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; }
       .form { display: grid; gap: 10px; }
+      .suggestion { display: grid; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 12px; }
     </style>
   </head>
   <body>
@@ -79,6 +89,7 @@ export function renderGraphHtml(graph, history = []) {
           <pre><code id="patch-output"></code></pre>
         </div>
       </section>
+      <section><h2>Suggestions</h2>${suggestionCards}</section>
       <section><h2>Entities</h2>${entities}</section>
       <section><h2>Actions</h2>${actions}</section>
       <section><h2>Modules</h2>${modules}</section>
@@ -91,6 +102,7 @@ export function renderGraphHtml(graph, history = []) {
       const prop = document.getElementById('patch-prop')
       const value = document.getElementById('patch-value')
       const output = document.getElementById('patch-output')
+      const suggestions = ${JSON.stringify(suggestions.map((item) => item.yaml))}
       function updatePatch() {
         const path = target.value + '.' + (prop.value || 'title')
         output.textContent = 'version: 0.1\\npatch:\\n  - op: text.set\\n    target: ' + path + '\\n    value: ' + JSON.stringify(value.value)
@@ -99,6 +111,9 @@ export function renderGraphHtml(graph, history = []) {
       prop?.addEventListener('input', updatePatch)
       value?.addEventListener('input', updatePatch)
       document.getElementById('patch-copy')?.addEventListener('click', () => navigator.clipboard?.writeText(output.textContent))
+      for (const button of document.querySelectorAll('[data-suggestion]')) {
+        button.addEventListener('click', () => navigator.clipboard?.writeText(suggestions[Number(button.dataset.suggestion)] || ''))
+      }
       updatePatch()
     </script>
   </body>

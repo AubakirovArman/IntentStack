@@ -24,6 +24,7 @@ import { deploymentPlan } from './deploy.js'
 import { getThemePack, listThemePacks } from './themes.js'
 import { collaborationReport, formatCollabReport } from './collab.js'
 import { loadConfiguredPlugins } from './plugins.js'
+import { intentSuggestions } from './suggestions.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -412,6 +413,22 @@ async function main() {
     return
   }
 
+  if (cmd === 'suggest') {
+    const { ast } = await loadAst(projectDir, cfg)
+    const graph = buildGraph(normalize(ast))
+    const suggestions = intentSuggestions(graph, { limit: Number(flag('limit', 6)) || 6 })
+    if (args.includes('--json')) console.log(JSON.stringify({ suggestions }, null, 2))
+    else {
+      console.log(`\nIntentStack suggestions - ${graph.project?.id || 'app'}\n`)
+      for (const item of suggestions) {
+        console.log(`${item.id}: ${item.title}`)
+        console.log(`  ${item.reason}`)
+        console.log(item.yaml.split('\n').map((line) => `  ${line}`).join('\n'))
+      }
+    }
+    return
+  }
+
   if (cmd === 'editor') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -730,6 +747,7 @@ function help() {
     '  intentstack doctor  [--project DIR]                             validate environment and plan',
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
     '  intentstack collab  [--project DIR] [--base REF] [--json]       inspect git/module owner changes',
+    '  intentstack suggest [--project DIR] [--json] [--limit N]         suggest semantic patch templates',
     '  intentstack editor  [--project DIR] [--out FILE]                 export visual patch editor',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
@@ -943,6 +961,7 @@ function graphSummary(graph) {
     theme: graph.theme,
     auth: graph.auth,
     tenancy: graph.tenancy,
+    navigation: graph.navigation,
     entities: graph.entities.map((e) => ({
       id: e.id,
       table: e.table || e.id.toLowerCase(),
@@ -953,7 +972,7 @@ function graphSummary(graph) {
       id: p.id,
       path: p.path,
       layout: p.layout,
-      sections: (p.sections || []).map((s) => ({ id: s.id, type: s.type })),
+      sections: (p.sections || []).map((s) => ({ id: s.id, type: s.type, entity: s.entity })),
     })),
     workflows: graph.workflows.map((w) => ({ id: w.id, trigger: w.trigger })),
     integrations: graph.integrations.map((i) => ({ id: i.id, type: i.type })),

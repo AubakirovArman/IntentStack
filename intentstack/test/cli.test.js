@@ -549,7 +549,49 @@ test('editor command exports the visual patch editor', () => {
     assert.match(res.stdout, /visual editor written/)
     const html = readFileSync(out, 'utf8')
     assert.match(html, /Patch Builder/)
+    assert.match(html, /Suggestions/)
     assert.match(html, /voice_agent_site/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('suggest command emits semantic patch templates', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-suggest-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: suggest_app
+  name: Suggest App
+  target: web_ts_minimal
+entities:
+  - id: Lead
+    fields:
+      - id: name
+        type: string
+actions:
+  - id: create_lead
+    type: create_record
+    entity: Lead
+pages:
+  - id: home
+    path: /
+    sections:
+      - id: hero
+        type: hero
+        title: Home
+`)
+    const res = run(['suggest', '--project', dir, '--json'])
+    assert.equal(res.status, 0, res.stderr)
+    const data = JSON.parse(res.stdout)
+    assert.ok(data.suggestions.some((item) => item.id === 'add_navigation'))
+    assert.ok(data.suggestions.some((item) => item.id === 'list_Lead'))
+    assert.ok(data.suggestions.some((item) => /action\.create/.test(item.yaml)))
+
+    const text = run(['suggest', '--project', dir, '--limit', '1'])
+    assert.equal(text.status, 0, text.stderr)
+    assert.match(text.stdout, /IntentStack suggestions/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
