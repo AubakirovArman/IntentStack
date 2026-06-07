@@ -1,4 +1,4 @@
-import { RECORD_ACTIONS } from './registry.js'
+import { ENTITY_ACTIONS } from './registry.js'
 
 export function generateTestFiles(graph) {
   const operations = apiOperations(graph)
@@ -15,7 +15,7 @@ function apiOperations(graph) {
   ]
   const byEntity = {}
   for (const action of graph.actions) {
-    if (!action.entity || !RECORD_ACTIONS.includes(action.type)) continue
+    if (!action.entity || !ENTITY_ACTIONS.includes(action.type)) continue
     ;(byEntity[action.entity] ||= []).push(action)
   }
   for (const [entityId, actions] of Object.entries(byEntity)) {
@@ -28,11 +28,13 @@ function apiOperations(graph) {
     const get = action('get_record')
     const update = action('update_record')
     const remove = action('delete_record')
+    const subscribe = action('subscribe_records')
     if (list) out.push(operation(list, 'GET', `/api/${base}`, entity, { expected: [200] }))
     if (create) out.push(operation(create, 'POST', `/api/${base}`, entity, { mutation: true, body: samplePayload(entity), expected: [200, 201] }))
     if (get) out.push(operation(get, 'GET', `/api/${base}/{id}`, entity, { id: true, expected: [200, 404] }))
     if (update) out.push(operation(update, 'PUT', `/api/${base}/{id}`, entity, { id: true, mutation: true, body: samplePayload(entity, { partial: true }), expected: [200, 404] }))
     if (remove) out.push(operation(remove, 'DELETE', `/api/${base}/{id}`, entity, { id: true, mutation: true, expected: [200, 404] }))
+    if (subscribe) out.push(operation(subscribe, 'GET', `/api/${base}/stream`, entity, { expected: [200] }))
   }
   return out
 }

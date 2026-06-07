@@ -29,4 +29,7 @@ Current commands:
 `build --no-format` skips formatter execution. `build --no-verify` skips generated app verification.
 `build --verify-install` runs `npm install` before generated `npm run build`.
 
+`subscribe_records` actions generate server-sent event streams at `/api/<table>/stream`
+and matching API client helpers.
+
 Generated zones are target-owned. Do not hand-edit files under managed zones.

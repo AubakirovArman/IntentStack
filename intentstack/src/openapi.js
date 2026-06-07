@@ -1,5 +1,5 @@
 import YAML from 'js-yaml'
-import { RECORD_ACTIONS } from './registry.js'
+import { ENTITY_ACTIONS } from './registry.js'
 import { hasActionAuth, hasPageAuth, isActivePolicy, policyRoles } from './emit/shared/modules.js'
 
 export function generateOpenApi(graph) {
@@ -54,6 +54,7 @@ export function generateOpenApi(graph) {
     const get = action('get_record')
     const update = action('update_record')
     const remove = action('delete_record')
+    const subscribe = action('subscribe_records')
 
     if (list || create) {
       spec.paths[collectionPath] ||= {}
@@ -65,6 +66,11 @@ export function generateOpenApi(graph) {
       if (get) spec.paths[itemPath].get = getOperation(entity, get)
       if (update) spec.paths[itemPath].put = updateOperation(entity, update)
       if (remove) spec.paths[itemPath].delete = deleteOperation(entity, remove)
+    }
+    if (subscribe) {
+      spec.paths[`/api/${base}/stream`] = {
+        get: subscribeOperation(entity, subscribe),
+      }
     }
   }
 
@@ -84,7 +90,7 @@ export function openApiFormat({ out, yaml }) {
 function groupRecordActions(graph) {
   const byEntity = {}
   for (const action of graph.actions) {
-    if (!action.entity || !RECORD_ACTIONS.includes(action.type)) continue
+    if (!action.entity || !ENTITY_ACTIONS.includes(action.type)) continue
     ;(byEntity[action.entity] ||= []).push(action)
   }
   return byEntity
@@ -191,6 +197,25 @@ function deleteOperation(entity, action) {
       }),
       403: errorResponse(),
       404: errorResponse(),
+    },
+  })
+}
+
+function subscribeOperation(entity, action) {
+  return secure(action, false, {
+    tags: [entity.id],
+    operationId: action.id,
+    summary: `Subscribe to ${entity.id} records`,
+    responses: {
+      200: {
+        description: 'Server-sent event stream of record snapshots.',
+        content: {
+          'text/event-stream': {
+            schema: { type: 'string' },
+          },
+        },
+      },
+      403: errorResponse(),
     },
   })
 }

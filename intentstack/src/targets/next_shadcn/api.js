@@ -1,4 +1,4 @@
-import { RECORD_ACTIONS } from '../../registry.js'
+import { ENTITY_ACTIONS } from '../../registry.js'
 import { hasActionAuth, hasPageAuth, isActivePolicy, roleLiteral } from '../../emit/shared/modules.js'
 import { BANNER } from './constants.js'
 
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   }
   const byEntity = {}
   for (const a of graph.actions) {
-    if (!a.entity || !RECORD_ACTIONS.includes(a.type)) continue
+    if (!a.entity || !ENTITY_ACTIONS.includes(a.type)) continue
     ;(byEntity[a.entity] ||= []).push(a)
   }
   const opts = { useAuth: hasActionAuth(graph.actions), useWorkflows: (graph.workflows || []).length > 0 }
@@ -56,9 +56,14 @@ export async function GET(req: Request) {
     const tname = e.id.toLowerCase()
     const base = e.table || tname
     const types = new Set(actions.map((a) => a.type))
-    files[`app/api/${base}/route.ts`] = collectionRoute(tname, types, actions, opts)
+    if (types.has('list_records') || types.has('create_record')) {
+      files[`app/api/${base}/route.ts`] = collectionRoute(tname, types, actions, opts)
+    }
     if (types.has('get_record') || types.has('update_record') || types.has('delete_record')) {
       files[`app/api/${base}/[id]/route.ts`] = itemRoute(tname, types, actions, opts)
+    }
+    if (types.has('subscribe_records')) {
+      files[`app/api/${base}/stream/route.ts`] = streamRoute(tname, actions, opts)
     }
   }
   return files
@@ -141,6 +146,45 @@ ${nextWorkflowCall(opts, action('delete_record'), '{ id: Number(params.id) }')}
 }
 `
   return out
+}
+
+function streamRoute(tname, actions, opts) {
+  const action = actions.find((a) => a.type === 'subscribe_records')
+  return BANNER + `import { db, ensureMigrated } from '@/lib/db/client'
+import { ${tname} } from '@/lib/db/schema'
+import { desc } from 'drizzle-orm'
+${opts.useAuth ? `import { assertRequestRole } from '@/lib/auth'\n` : ''}
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: Request) {
+${nextAuthGuard(action, 'req')}  await ensureMigrated()
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    start(controller) {
+      let closed = false
+      async function send() {
+        if (closed) return
+        const rows = await db.select().from(${tname}).orderBy(desc(${tname}.createdAt))
+        controller.enqueue(encoder.encode(\`event: records\\ndata: \${JSON.stringify({ data: rows })}\\n\\n\`))
+      }
+      void send()
+      const timer = setInterval(() => { void send() }, 2000)
+      req.signal.addEventListener('abort', () => {
+        closed = true
+        clearInterval(timer)
+        controller.close()
+      })
+    },
+  })
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  })
+}
+`
 }
 
 function nextAuthGuard(action, reqName) {

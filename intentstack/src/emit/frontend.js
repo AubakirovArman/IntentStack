@@ -738,6 +738,19 @@ function csrfHeaders(): Record<string, string> {
 
 `
     }
+    if (types.has('subscribe_records')) {
+      out += `export function subscribe${P}(onRecords: (rows: Array<Record<string, unknown>>) => void, onError?: (event: Event) => void) {
+  const source = new EventSource(\`\${BASE}/api/${base}/stream\`, { withCredentials: true })
+  source.addEventListener('records', (event) => {
+    const json = JSON.parse((event as MessageEvent).data)
+    onRecords((json.data ?? []) as Array<Record<string, unknown>>)
+  })
+  if (onError) source.addEventListener('error', onError)
+  return () => source.close()
+}
+
+`
+    }
   }
   return out
 }

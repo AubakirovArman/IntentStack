@@ -137,6 +137,7 @@ function buildTypes({ entities, actions, pages, entityById }) {
 
 function actionOutputType(type, entityId) {
   if (type === 'list_records') return `Array<Entity.${entityId}>`
+  if (type === 'subscribe_records') return `Stream<Array<Entity.${entityId}>>`
   if (['create_record', 'get_record', 'update_record'].includes(type)) return `Entity.${entityId}`
   if (type === 'delete_record') return '{ ok: boolean }'
   return null

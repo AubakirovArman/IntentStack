@@ -55,3 +55,4 @@ Status legend:
 39. Theme marketplace v0: `done`. A local `themes` registry exposes reusable theme packs, `intentstack themes --json` lists them, and `intentstack themes <preset> --write` applies a pack through modular intent writeback.
 40. Visual editor v0: `done`. `intentstack editor --out editor.html` exports the visual graph plus semantic Patch Builder as a dedicated editor entrypoint for non-code intent changes.
 41. Plugin/target marketplace v0: `done`. `intentstack marketplace` exposes the local catalog of targets, theme packs, and domain modules in text or JSON, giving agents one product-level discovery command before future third-party installs.
+42. Realtime subscriptions v0: `done`. Action type `subscribe_records` is validated, exposed in capabilities/schema, represented in Core IR as a stream output, emitted as `/api/<table>/stream` server-sent event endpoints for Web/Hono and Next, documented in OpenAPI, and covered by generated API clients/tests.

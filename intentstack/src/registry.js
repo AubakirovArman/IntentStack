@@ -8,10 +8,12 @@ export const FIELD_TYPES = ['string', 'text', 'number', 'boolean', 'enum', 'date
 
 export const ACTION_TYPES = [
   'create_record', 'list_records', 'get_record', 'update_record', 'delete_record',
+  'subscribe_records',
   'navigate', 'open_modal', 'close_modal', 'show_toast',
 ]
 
 export const RECORD_ACTIONS = ['create_record', 'list_records', 'get_record', 'update_record', 'delete_record']
+export const ENTITY_ACTIONS = [...RECORD_ACTIONS, 'subscribe_records']
 
 export const COMPONENT_TYPES = [
   'navbar',
@@ -33,7 +35,7 @@ export const TARGETS = {
     frontend: true, backend: true, database: true,
     framework: 'react', ui: 'daisyui',
     supported_components: COMPONENT_TYPES,
-    supported_actions: ['create_record', 'list_records', 'get_record', 'update_record', 'delete_record', 'navigate', 'show_toast'],
+    supported_actions: ['create_record', 'list_records', 'get_record', 'update_record', 'delete_record', 'subscribe_records', 'navigate', 'show_toast'],
     supported_field_types: FIELD_TYPES,
   },
   next_shadcn: {
@@ -41,7 +43,7 @@ export const TARGETS = {
     frontend: true, backend: true, database: true,
     framework: 'next', ui: 'shadcn',
     supported_components: COMPONENT_TYPES,
-    supported_actions: ['create_record', 'list_records', 'get_record', 'update_record', 'delete_record', 'navigate', 'show_toast'],
+    supported_actions: ['create_record', 'list_records', 'get_record', 'update_record', 'delete_record', 'subscribe_records', 'navigate', 'show_toast'],
     supported_field_types: FIELD_TYPES,
   },
 }

@@ -24,6 +24,7 @@ test('list_capabilities exposes target capabilities and patch ops as JSON', () =
   assert.ok(data.targets.web_ts_minimal.supported_components.includes('stats'))
   assert.ok(data.targets.web_ts_minimal.supported_components.includes('pricing_cards'))
   assert.ok(data.targets.web_ts_minimal.supported_components.includes('content'))
+  assert.ok(data.targets.web_ts_minimal.supported_actions.includes('subscribe_records'))
   assert.ok(data.patch_ops.includes('navigation.set'))
   assert.ok(data.patch_ops.includes('content.block.add'))
   assert.ok(data.patch_ops.includes('content.example.add'))
@@ -41,6 +42,7 @@ test('schema command exposes the DSL JSON Schema', () => {
   assert.equal(schema.title, 'IntentStack Intent DSL v0.1')
   assert.ok(schema.properties.navigation)
   assert.ok(schema.properties.actions.items.properties.type.enum.includes('update_record'))
+  assert.ok(schema.properties.actions.items.properties.type.enum.includes('subscribe_records'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.type.enum.includes('content'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.type.enum.includes('custom_component'))
   assert.equal(schema.properties.pages.items.properties.sections.items.properties.embed_only.type, 'boolean')
@@ -236,6 +238,10 @@ actions:
     type: create_record
     entity: Lead
     auth: admin
+  - id: subscribe_leads
+    type: subscribe_records
+    entity: Lead
+    auth: admin
 pages:
   - id: home
     path: /
@@ -251,6 +257,8 @@ pages:
     assert.deepEqual(data.paths['/api/lead'].get['x-intentstack-roles'], ['admin'])
     assert.equal(data.paths['/api/lead'].get.parameters, undefined)
     assert.ok(data.paths['/api/lead'].post.parameters.some((item) => item.name === 'X-CSRF-Token'))
+    assert.equal(data.paths['/api/lead/stream'].get.operationId, 'subscribe_leads')
+    assert.equal(data.paths['/api/lead/stream'].get.responses[200].content['text/event-stream'].schema.type, 'string')
     assert.ok(data.paths['/api/auth/login'].post)
   } finally {
     rmSync(dir, { recursive: true, force: true })

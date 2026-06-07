@@ -5,5 +5,5 @@ database: true
 framework: react
 ui: daisyui
 components: [navbar, hero, card_grid, form, table, record_detail, footer, stats, pricing_cards, content, custom_component]
-actions: [create_record, list_records, get_record, update_record, delete_record, navigate, show_toast]
+actions: [create_record, list_records, get_record, update_record, delete_record, subscribe_records, navigate, show_toast]
 field_types: [string, text, number, boolean, enum, datetime]

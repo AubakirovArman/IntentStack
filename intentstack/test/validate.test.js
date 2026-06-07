@@ -164,3 +164,14 @@ test('rejects malformed navigation and content blocks', () => {
   assert.ok(d.errors.some((e) => e.code === 'E2247'))
   assert.ok(d.errors.some((e) => e.code === 'E2248'))
 })
+
+test('subscribe_records actions require an entity', () => {
+  const d = validate({
+    version: '0.1',
+    project: { id: 'bad_realtime', target: 'web_ts_minimal' },
+    actions: [{ id: 'subscribe_leads', type: 'subscribe_records' }],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(d.hasErrors(), true)
+  assert.ok(d.errors.some((e) => e.code === 'E2033'))
+})

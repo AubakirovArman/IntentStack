@@ -12,6 +12,7 @@ function withCrudActions(ast) {
   for (const action of [
     { id: 'get_lead', type: 'get_record', entity: 'Lead' },
     { id: 'delete_lead', type: 'delete_record', entity: 'Lead' },
+    { id: 'subscribe_leads', type: 'subscribe_records', entity: 'Lead' },
   ]) {
     if (!ast.actions.some((a) => a.id === action.id)) ast.actions.push(action)
   }
@@ -36,10 +37,13 @@ test('web_ts_minimal generates CRUD routes, API client, stats and pricing sectio
   assert.match(files['server/generated/routes/lead.ts'], /r\.get\('\/leads\/:id'/)
   assert.match(files['server/generated/routes/lead.ts'], /r\.put\('\/leads\/:id'/)
   assert.match(files['server/generated/routes/lead.ts'], /r\.delete\('\/leads\/:id'/)
+  assert.match(files['server/generated/routes/lead.ts'], /r\.get\('\/leads\/stream'/)
+  assert.match(files['server/generated/routes/lead.ts'], /streamSSE/)
   assert.match(files['server/generated/routes/lead.ts'], /db\.update\(lead\)\.set\(parsed\.data\)/)
   assert.match(files['src/generated/api/client.ts'], /export async function getLead/)
   assert.match(files['src/generated/api/client.ts'], /export async function updateLead/)
   assert.match(files['src/generated/api/client.ts'], /export async function deleteLead/)
+  assert.match(files['src/generated/api/client.ts'], /export function subscribeLead/)
   assert.match(files['src/generated/api/client.ts'], /method: 'PUT'/)
   assert.match(files['src/generated/pages/DashboardLeadDetailPage.tsx'], /<LeadDetail \/>/)
   assert.match(files['src/generated/components/LeadDetail.tsx'], /getLead/)
@@ -70,13 +74,16 @@ test('next_shadcn generates CRUD routes, API client, stats and pricing sections'
   assert.match(files['lib/db/client.ts'], /createHash\('sha256'\)/)
   assert.match(files['lib/db/client.ts'], /different checksum/)
   assert.ok(files['app/api/leads/[id]/route.ts'])
+  assert.ok(files['app/api/leads/stream/route.ts'])
   assert.match(files['app/api/leads/[id]/route.ts'], /export async function GET/)
   assert.match(files['app/api/leads/[id]/route.ts'], /export async function PUT/)
   assert.match(files['app/api/leads/[id]/route.ts'], /export async function DELETE/)
   assert.match(files['app/api/leads/[id]/route.ts'], /db\.update\(lead\)\.set\(parsed\.data\)/)
+  assert.match(files['app/api/leads/stream/route.ts'], /ReadableStream/)
   assert.match(files['lib/api/client.ts'], /export async function getLead/)
   assert.match(files['lib/api/client.ts'], /export async function updateLead/)
   assert.match(files['lib/api/client.ts'], /export async function deleteLead/)
+  assert.match(files['lib/api/client.ts'], /export function subscribeLead/)
   assert.match(files['lib/api/client.ts'], /method: 'PUT'/)
   assert.match(files['app/dashboard/leads/[id]/page.tsx'], /<LeadDetail \/>/)
   assert.match(files['components/generated/LeadDetail.tsx'], /getLead/)
@@ -88,6 +95,19 @@ test('next_shadcn generates CRUD routes, API client, stats and pricing sections'
   assert.match(files['components/generated/LeadsTable.tsx'], /onDelete/)
   assert.match(files['components/generated/Metrics.tsx'], /1000/)
   assert.match(files['components/generated/Pricing.tsx'], /Starter/)
+})
+
+test('next_shadcn emits only stream route for subscribe-only actions', () => {
+  const files = planFiles(buildGraph({
+    version: '0.1',
+    project: { id: 'realtime_only', target: 'next_shadcn' },
+    entities: [{ id: 'Lead', table: 'leads', fields: [{ id: 'name', type: 'string' }] }],
+    actions: [{ id: 'subscribe_leads', type: 'subscribe_records', entity: 'Lead' }],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  }))
+  assert.equal(files['app/api/leads/route.ts'], undefined)
+  assert.ok(files['app/api/leads/stream/route.ts'])
+  assert.match(files['lib/api/client.ts'], /subscribeLead/)
 })
 
 function docsIntent(target) {

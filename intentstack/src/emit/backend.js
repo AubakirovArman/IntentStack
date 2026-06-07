@@ -1,11 +1,11 @@
 // Backend adapter: Action nodes -> Hono routes + server entrypoint.
 import { BANNER_TS } from './util.js'
-import { RECORD_ACTIONS } from '../registry.js'
+import { ENTITY_ACTIONS } from '../registry.js'
 import { hasActionAuth, hasPageAuth, honoAuthTs, integrationsTs, isActivePolicy, roleLiteral, workflowsTs } from './shared/modules.js'
 
 export function emitBackend(graph) {
   const files = {}
-  const recordActions = graph.actions.filter((a) => RECORD_ACTIONS.includes(a.type))
+  const recordActions = graph.actions.filter((a) => ENTITY_ACTIONS.includes(a.type))
   const useAuth = hasActionAuth(recordActions) || hasPageAuth(graph)
   const useWorkflows = (graph.workflows || []).length > 0
   const byEntity = {}
@@ -125,9 +125,10 @@ function routeTs(entity, actions, opts) {
   const base = entity.table || t
   const has = (type) => actions.some((a) => a.type === type)
   const action = (type) => actions.find((a) => a.type === type)
+  const hasSubscribe = has('subscribe_records')
 
   let out = BANNER_TS + `import { Hono } from 'hono'
-import { db } from '../db/client'
+${hasSubscribe ? `import { streamSSE } from 'hono/streaming'\n` : ''}import { db } from '../db/client'
 import { ${t} } from '../db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { ${t}CreateSchema } from '../validators/${t}'
@@ -182,6 +183,18 @@ ${authGuard(action('delete_record'))}
   await db.delete(${t}).where(eq(${t}.id, id))
 ${workflowCall(opts, action('delete_record'), '{ id }')}
   return c.json({ ok: true })
+})
+`
+  if (hasSubscribe) out += `
+r.get('/${base}/stream', async (c) => {
+${authGuard(action('subscribe_records'))}
+  return streamSSE(c, async (stream) => {
+    while (true) {
+      const rows = await db.select().from(${t}).orderBy(desc(${t}.createdAt))
+      await stream.writeSSE({ event: 'records', data: JSON.stringify({ data: rows }) })
+      await stream.sleep(2000)
+    }
+  })
 })
 `
   out += `\nexport default r\n`

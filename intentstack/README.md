@@ -54,6 +54,7 @@ compiler. It is intentionally not a full Rust port yet.
 - `graph --html` shows module source files and ownership for modular projects.
 - `editor` exports the same visual graph plus Patch Builder as an explicit visual editing entrypoint.
 - Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
+- `subscribe_records` actions generate `/api/<table>/stream` server-sent event endpoints.
 - `themes` lists local theme packs and can apply one back into modular intent.
 - `marketplace` lists local targets, theme packs, and domain modules available in this compiler build.
 

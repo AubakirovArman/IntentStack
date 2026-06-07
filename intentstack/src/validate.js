@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import { Diagnostics, closest } from './diagnostics.js'
-import { TARGETS, FIELD_TYPES, ACTION_TYPES } from './registry.js'
+import { TARGETS, FIELD_TYPES, ACTION_TYPES, ENTITY_ACTIONS } from './registry.js'
 import { policyRoles } from './emit/shared/modules.js'
 
 const ROOT_KEYS = new Set([
@@ -98,6 +98,9 @@ export function validate(ast, opts = {}) {
       d.error('E4003', `Unknown action type "${a.type}".`, { path: `${base}.type`, suggestion: `Supported: ${ACTION_TYPES.join(', ')}` })
     } else if (target && !target.supported_actions.includes(a.type)) {
       d.error('E4003', `Target "${targetId}" does not support action type "${a.type}".`, { path: `${base}.type` })
+    }
+    if (a.type && ENTITY_ACTIONS.includes(a.type) && !a.entity) {
+      d.error('E2033', `Action "${a.id}" of type "${a.type}" requires entity.`, { path: `${base}.entity` })
     }
     if (a.entity && !entityIds.has(a.entity)) {
       const did = closest(a.entity, [...entityIds])
