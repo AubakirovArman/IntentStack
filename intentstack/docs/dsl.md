@@ -23,4 +23,4 @@ Supported field types:
 
 Supported components are target capabilities. Use `intentstack list_capabilities --target web_ts_minimal` to inspect the authoritative list.
 
-Agents should prefer patch files over rewriting the full intent. Patch operations are semantic commands such as `section.add`, `entity.field.add`, `form.bind_submit`, and `table.column.remove`.
+Agents should prefer patch files over rewriting the full intent. Patch operations are semantic commands such as `section.add`, `section.module.add`, `content.example.add`, `entity.field.add`, `form.bind_submit`, and `table.column.remove`.

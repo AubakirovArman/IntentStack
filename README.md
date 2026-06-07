@@ -88,7 +88,7 @@ Implemented: `new`, `check`, `build`, `plan`, `diff`, `apply`, `explain`, `docto
 entities -> Drizzle schema + SQL migration + zod validators; record actions -> Hono routes /
 Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, `hero`, `card_grid`, `stats`,
 `pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; derived API clients; inline
-table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content` block `example` +
+table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; JSON Schema; visual graph HTML export; patch history; basic auth guards; workflow/integration
 metadata and webhook dispatch.
 

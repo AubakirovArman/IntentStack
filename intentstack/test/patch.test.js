@@ -68,6 +68,7 @@ test('patchOps exposes the PRD command surface implemented by the compiler', () 
     'component.remove',
     'content.blocks.set',
     'content.block.add',
+    'content.example.add',
     'content.block.move',
     'content.block.update',
     'content.block.remove',
@@ -102,7 +103,18 @@ test('new patch operations mutate intent by semantic objects', () => {
       { op: 'table.add', page: 'home', id: 'leads_table', entity: 'Lead', columns: ['name'], action: 'list_leads' },
       { op: 'table.column.update', table: 'leads_table', column: 'name', value: { label: 'Lead name' } },
       { op: 'section.add', page: 'home', section: { id: 'docs_content', type: 'content', blocks: [{ id: 'intro', type: 'paragraph', text: 'Hello docs' }] } },
+      { op: 'section.add', page: 'home', section: { id: 'docs_preview', type: 'card_grid', embed_only: true, items: [{ title: 'Preview', text: 'Embedded.' }] } },
       { op: 'content.block.add', section: 'docs_content', block: { id: 'install', type: 'code', language: 'bash', code: 'npm run build' } },
+      {
+        op: 'content.example.add',
+        section: 'docs_content',
+        id: 'preview_example',
+        title: 'Preview example',
+        text: 'Live preview and patch code in one block.',
+        preview_section: 'docs_preview',
+        code: 'patch:\n  - op: section.module.add',
+        after: 'install',
+      },
       { op: 'content.block.move', section: 'docs_content', block: 'install', before: 'intro' },
       { op: 'content.block.update', section: 'docs_content', block: 'intro', value: { text: 'Updated docs' } },
       { op: 'content.block.remove', section: 'docs_content', block: 'install' },
@@ -134,4 +146,59 @@ test('new patch operations mutate intent by semantic objects', () => {
   assert.equal(ast.pages[0].sections[3].blocks[1].type, 'link')
   assert.equal(ast.api.routes[0].action, 'list_leads')
   assert.equal(ast.pages[0].layout_config.width, 'xl')
+})
+
+test('content.example.add creates an embedded docs example block', () => {
+  const ast = {
+    version: '0.1',
+    project: { id: 'docs_examples', target: 'web_ts_minimal' },
+    pages: [
+      {
+        id: 'docs',
+        path: '/docs',
+        layout: 'docs',
+        sections: [
+          {
+            id: 'docs_content',
+            type: 'content',
+            blocks: [{ id: 'intro', type: 'paragraph', text: 'Intro' }],
+          },
+          {
+            id: 'docs_cards',
+            type: 'card_grid',
+            embed_only: true,
+            items: [{ title: 'Card', text: 'Preview' }],
+          },
+        ],
+      },
+    ],
+  }
+
+  const { errors, changes } = applyPatch(ast, {
+    patch: [
+      {
+        op: 'content.example.add',
+        section: 'docs_content',
+        id: 'cards_example',
+        title: 'Cards',
+        text: 'Preview and code stay together.',
+        preview_section: 'docs_cards',
+        code: 'version: 0.1\npatch: []',
+        after: 'intro',
+      },
+    ],
+  })
+
+  assert.deepEqual(errors, [])
+  assert.match(changes[0].summary, /add content example cards_example/)
+  assert.deepEqual(ast.pages[0].sections[0].blocks[1], {
+    id: 'cards_example',
+    type: 'example',
+    title: 'Cards',
+    text: 'Preview and code stay together.',
+    section: 'docs_cards',
+    language: 'yaml',
+    code: 'version: 0.1\npatch: []',
+  })
+  assert.equal(validate(ast).hasErrors(), false)
 })

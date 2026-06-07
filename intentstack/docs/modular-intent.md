@@ -134,6 +134,38 @@ section in the page's `sections` list so the compiler generates it, and set `emb
 the page does not render that section as a separate band. The `example` block then points to the
 section id and stores the patch code beside the preview.
 
+Use `content.example.add` to insert that article block without hand-editing the content module:
+
+```yaml
+version: 0.1
+patch:
+  - op: section.module.add
+    page: docs
+    after: docs_content
+    section:
+      id: docs_cards_example
+      type: card_grid
+      embed_only: true
+      items:
+        - title: One card
+          text: Live preview and patch code stay together.
+  - op: content.example.add
+    section: docs_content
+    id: cards_example
+    title: Card grid
+    text: Generated card_grid preview with the patch that creates it.
+    preview_section: docs_cards_example
+    code: |
+      version: 0.1
+      patch:
+        - op: section.module.add
+          page: docs
+          section:
+            id: docs_cards_example
+            type: card_grid
+            embed_only: true
+```
+
 ## Diagnostics
 
 For modular projects diagnostics include file provenance:

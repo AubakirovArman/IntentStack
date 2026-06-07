@@ -69,6 +69,7 @@ For new page sections in modular projects, prefer `section.module.add` over `sec
 creates the section owner file and keeps the page module as an ordered list of `ref`s.
 When a section should only appear inside a docs `example` block, keep its page `ref` but set
 `embed_only: true` on the section module.
+Use `content.example.add` to insert the docs block that pairs that live preview with patch code.
 
 ## Patches
 

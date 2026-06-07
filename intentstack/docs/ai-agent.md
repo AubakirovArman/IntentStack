@@ -21,6 +21,7 @@ Rules:
 - Prefer top-level `navigation` over duplicating `navbar` sections across pages.
 - Use `content` sections for docs-style copy instead of forcing documentation into `card_grid`.
 - Use `example` content blocks when docs need a live generated component and the patch code in the same article block.
+- Prefer `content.example.add` over hand-editing a docs content module for embedded examples.
 - For modular projects, prefer `apply --write`; it writes changes back to owner module files.
 - Do not flatten a modular app into one root YAML unless explicitly exporting with `--out-intent`.
 - `intentstack new` creates modular projects by default; `--single-file` is only for legacy monoliths.

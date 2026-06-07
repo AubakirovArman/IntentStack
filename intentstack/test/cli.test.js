@@ -26,6 +26,7 @@ test('list_capabilities exposes target capabilities and patch ops as JSON', () =
   assert.ok(data.targets.web_ts_minimal.supported_components.includes('content'))
   assert.ok(data.patch_ops.includes('navigation.set'))
   assert.ok(data.patch_ops.includes('content.block.add'))
+  assert.ok(data.patch_ops.includes('content.example.add'))
   assert.ok(data.patch_ops.includes('page.delete'))
   assert.equal(data.domain_modules.web_crud.status, 'active')
   assert.equal(data.domain_modules.auth_permissions.status, 'partial')
@@ -246,6 +247,7 @@ includes:
   layout: docs
   sections:
     - ref: docs_content
+    - ref: docs_cards
 `)
     writeFileSync(join(dir, 'intent/frontend/sections/docs/content.yaml'), `section:
   id: docs_content
@@ -255,6 +257,14 @@ includes:
     - id: intro
       type: paragraph
       text: Before
+`)
+    writeFileSync(join(dir, 'intent/frontend/sections/docs/cards.yaml'), `section:
+  id: docs_cards
+  type: card_grid
+  embed_only: true
+  items:
+    - title: One card
+      text: Embedded preview.
 `)
     const patch = join(dir, 'update.patch.yaml')
     writeFileSync(patch, `patch:
@@ -267,6 +277,14 @@ includes:
     block: intro
     value:
       text: After
+  - op: content.example.add
+    section: docs_content
+    id: cards_example
+    title: Cards
+    preview_section: docs_cards
+    code: |
+      version: 0.1
+      patch: []
 `)
 
     const applied = run(['apply', patch, '--project', dir, '--write'])
@@ -280,6 +298,8 @@ includes:
     assert.doesNotMatch(rootIntent, /^pages:/m)
     assert.match(navigation, /label: Docs/)
     assert.match(section, /text: After/)
+    assert.match(section, /type: example/)
+    assert.match(section, /section: docs_cards/)
 
     const checked = run(['check', '--project', dir])
     assert.equal(checked.status, 0, checked.stderr)
