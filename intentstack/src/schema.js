@@ -223,12 +223,17 @@ function contentBlockSchema() {
     required: ['type'],
     properties: {
       id: { type: 'string' },
-      type: { enum: ['heading', 'paragraph', 'list', 'code'] },
+      type: { enum: ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table'] },
       level: { type: 'number' },
       text: { type: 'string' },
+      title: { type: 'string' },
+      href: { type: 'string' },
+      variant: { type: 'string' },
       language: { type: 'string' },
       code: { type: 'string' },
       items: { type: 'array', items: { type: 'string' } },
+      columns: { type: 'array', items: { type: 'string' } },
+      rows: { type: 'array' },
     },
   }
 }

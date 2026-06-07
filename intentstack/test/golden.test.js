@@ -112,6 +112,9 @@ function docsIntent(target) {
               { id: 'workflow', type: 'heading', level: 2, text: 'Workflow' },
               { id: 'intro', type: 'paragraph', text: 'Use patches to edit the app.' },
               { id: 'steps', type: 'list', items: ['Patch', 'Check', 'Build'] },
+              { id: 'tip', type: 'callout', title: 'Tip', text: 'Keep changes small.' },
+              { id: 'link', type: 'link', text: 'Open docs', href: '/docs' },
+              { id: 'matrix', type: 'table', columns: ['Step', 'Command'], rows: [['Build', 'intentstack build']] },
               { id: 'command', type: 'code', language: 'bash', code: 'intentstack build' },
             ],
           },
@@ -130,6 +133,8 @@ test('global navigation and content sections generate for both targets', () => {
   assert.match(webFiles['src/generated/pages/DocsPage.tsx'], /<AppNav \/>/)
   assert.match(webFiles['src/generated/components/DocsContent.tsx'], /On this page/)
   assert.match(webFiles['src/generated/components/DocsContent.tsx'], /intentstack build/)
+  assert.match(webFiles['src/generated/components/DocsContent.tsx'], /Open docs/)
+  assert.match(webFiles['src/generated/components/DocsContent.tsx'], /<table/)
   assert.match(webFiles['src/routes.tsx'], /path="\/docs"/)
 
   const nextAst = docsIntent('next_shadcn')
@@ -140,4 +145,6 @@ test('global navigation and content sections generate for both targets', () => {
   assert.match(nextFiles['app/docs/page.tsx'], /<AppNav \/>/)
   assert.match(nextFiles['components/generated/DocsContent.tsx'], /On this page/)
   assert.match(nextFiles['components/generated/DocsContent.tsx'], /intentstack build/)
+  assert.match(nextFiles['components/generated/DocsContent.tsx'], /Open docs/)
+  assert.match(nextFiles['components/generated/DocsContent.tsx'], /<table/)
 })

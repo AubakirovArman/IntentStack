@@ -91,6 +91,9 @@ test('validates top-level navigation and content blocks', () => {
               { id: 'overview', type: 'heading', level: 2, text: 'Overview' },
               { id: 'intro', type: 'paragraph', text: 'Generated docs content.' },
               { id: 'steps', type: 'list', items: ['Patch', 'Check', 'Build'] },
+              { id: 'tip', type: 'callout', title: 'Tip', text: 'Use small patches.' },
+              { id: 'link', type: 'link', text: 'Docs', href: '/docs' },
+              { id: 'matrix', type: 'table', columns: ['Step', 'Command'], rows: [['Check', 'intentstack check']] },
               { id: 'command', type: 'code', language: 'bash', code: 'intentstack check' },
             ],
           },
@@ -121,6 +124,9 @@ test('rejects malformed navigation and content blocks', () => {
               { id: 'bad_heading', type: 'heading', level: 9, text: 'Too deep' },
               { id: 'bad_list', type: 'list', items: [] },
               { id: 'bad_code', type: 'code' },
+              { id: 'bad_link', type: 'link', text: 'Missing href' },
+              { id: 'bad_callout', type: 'callout' },
+              { id: 'bad_table', type: 'table', columns: [], rows: [] },
             ],
           },
         ],
@@ -132,4 +138,8 @@ test('rejects malformed navigation and content blocks', () => {
   assert.ok(d.errors.some((e) => e.code === 'E2235'))
   assert.ok(d.errors.some((e) => e.code === 'E2237'))
   assert.ok(d.errors.some((e) => e.code === 'E2239'))
+  assert.ok(d.errors.some((e) => e.code === 'E2241'))
+  assert.ok(d.errors.some((e) => e.code === 'E2242'))
+  assert.ok(d.errors.some((e) => e.code === 'E2243'))
+  assert.ok(d.errors.some((e) => e.code === 'E2244'))
 })

@@ -20,6 +20,20 @@ section:
         - Keep route metadata in page modules.
         - Keep reusable UI sections in section modules.
         - Reference sections by stable ids from page modules.
+    - id: note
+      type: callout
+      title: Authoring note
+      text: Content modules can mix prose, links, callouts, code, and tables.
+    - id: reference
+      type: link
+      text: Open the lead workspace
+      href: /leads
+    - id: matrix
+      type: table
+      columns: [Layer, Module]
+      rows:
+        - [Frontend, page and section files]
+        - [Backend, entity and action files]
     - id: command
       type: code
       language: bash

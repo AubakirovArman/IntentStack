@@ -887,7 +887,41 @@ ${items}
     const label = block.language ? `          <div className="text-xs uppercase tracking-wide text-muted-foreground">${t(block.language)}</div>\n` : ''
     return `${label}          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>${t(block.code)}</code></pre>`
   }
+  if (block.type === 'link') {
+    return `          <p><a href=${jsStr(block.href)} className="font-medium text-primary underline-offset-4 hover:underline">${t(block.text)}</a></p>`
+  }
+  if (block.type === 'callout') {
+    const title = block.title ? `            <p className="font-semibold">${t(block.title)}</p>\n` : ''
+    return `          <div className="rounded-lg border bg-muted/50 p-4">
+${title}            <p className="leading-7 text-muted-foreground">${t(block.text)}</p>
+          </div>`
+  }
+  if (block.type === 'table') {
+    const columns = block.columns || []
+    const head = columns.map((column) => `              <th className="px-4 py-3 text-left font-medium">${t(column)}</th>`).join('\n')
+    const rows = (block.rows || []).map((row) => `            <tr className="border-t">
+${columns.map((column, index) => `              <td className="px-4 py-3">${t(tableCell(row, column, index))}</td>`).join('\n')}
+            </tr>`).join('\n')
+    return `          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+${head}
+                </tr>
+              </thead>
+              <tbody>
+${rows}
+              </tbody>
+            </table>
+          </div>`
+  }
   return `          <p className="text-base leading-7 text-muted-foreground">${t(block.text)}</p>`
+}
+
+function tableCell(row, column, index) {
+  if (Array.isArray(row)) return row[index]
+  if (row && typeof row === 'object') return row[column] ?? row[slug(column)] ?? ''
+  return ''
 }
 
 function buildForm(name, graph, s, theme) {

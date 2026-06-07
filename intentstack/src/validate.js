@@ -21,7 +21,7 @@ const ROOT_KEYS = new Set([
 ])
 const WORKFLOW_STEP_TYPES = ['email', 'webhook', 'background_job', 'state_transition', 'approval']
 const INTEGRATION_TYPES = ['webhook', 'email', 'crm', 'telegram', 'whatsapp', 'payment', 'external_api']
-const CONTENT_BLOCK_TYPES = ['heading', 'paragraph', 'list', 'code']
+const CONTENT_BLOCK_TYPES = ['heading', 'paragraph', 'list', 'code', 'link', 'callout', 'table']
 const SECRET_KEY = /(secret|token|password|api[_-]?key|private[_-]?key)/i
 
 export function validate(ast, opts = {}) {
@@ -258,6 +258,11 @@ function validateContent(d, sp, s) {
       }
     }
     if (block.type === 'paragraph' && !block.text) d.error('E2236', 'paragraph block text is required.', { path: `${bp}.text` })
+    if (block.type === 'link') {
+      if (!block.text) d.error('E2240', 'link block text is required.', { path: `${bp}.text` })
+      if (!block.href) d.error('E2241', 'link block href is required.', { path: `${bp}.href` })
+    }
+    if (block.type === 'callout' && !block.text) d.error('E2242', 'callout block text is required.', { path: `${bp}.text` })
     if (block.type === 'list') {
       const items = asArray(d, block.items, `${bp}.items`)
       if (items.length === 0) d.error('E2237', 'list block items are required.', { path: `${bp}.items` })
@@ -266,6 +271,12 @@ function validateContent(d, sp, s) {
       }
     }
     if (block.type === 'code' && !block.code) d.error('E2239', 'code block code is required.', { path: `${bp}.code` })
+    if (block.type === 'table') {
+      const columns = asArray(d, block.columns, `${bp}.columns`)
+      const rows = asArray(d, block.rows, `${bp}.rows`)
+      if (columns.length === 0) d.error('E2243', 'table block columns are required.', { path: `${bp}.columns` })
+      if (rows.length === 0) d.error('E2244', 'table block rows are required.', { path: `${bp}.rows` })
+    }
   }
 }
 

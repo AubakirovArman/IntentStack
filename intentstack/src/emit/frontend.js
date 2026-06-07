@@ -260,7 +260,41 @@ ${items}
     const label = block.language ? `          <div className="text-xs uppercase tracking-wide opacity-60">${t(block.language)}</div>\n` : ''
     return `${label}          <pre className="${RAD} overflow-x-auto border border-base-200 bg-base-200 p-4 text-sm"><code>${t(block.code)}</code></pre>`
   }
+  if (block.type === 'link') {
+    return `          <p><a href=${jsStr(block.href)} className="link link-primary font-medium">${t(block.text)}</a></p>`
+  }
+  if (block.type === 'callout') {
+    const title = block.title ? `            <p className="font-semibold">${t(block.title)}</p>\n` : ''
+    return `          <div className="${RAD} border border-info/30 bg-info/10 p-4">
+${title}            <p className="leading-7 opacity-80">${t(block.text)}</p>
+          </div>`
+  }
+  if (block.type === 'table') {
+    const columns = block.columns || []
+    const head = columns.map((column) => `              <th>${t(column)}</th>`).join('\n')
+    const rows = (block.rows || []).map((row) => `            <tr>
+${columns.map((column, index) => `              <td>${t(tableCell(row, column, index))}</td>`).join('\n')}
+            </tr>`).join('\n')
+    return `          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+${head}
+                </tr>
+              </thead>
+              <tbody>
+${rows}
+              </tbody>
+            </table>
+          </div>`
+  }
   return `          <p className="text-base leading-7 opacity-80">${t(block.text)}</p>`
+}
+
+function tableCell(row, column, index) {
+  if (Array.isArray(row)) return row[index]
+  if (row && typeof row === 'object') return row[column] ?? row[slug(column)] ?? ''
+  return ''
 }
 
 function buildForm(name, graph, s, RAD, DEN) {

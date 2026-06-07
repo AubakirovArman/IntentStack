@@ -65,7 +65,9 @@ test('patchOps exposes the PRD command surface implemented by the compiler', () 
     'component.add',
     'component.update',
     'component.remove',
+    'content.blocks.set',
     'content.block.add',
+    'content.block.move',
     'content.block.update',
     'content.block.remove',
   ]) {
@@ -100,8 +102,17 @@ test('new patch operations mutate intent by semantic objects', () => {
       { op: 'table.column.update', table: 'leads_table', column: 'name', value: { label: 'Lead name' } },
       { op: 'section.add', page: 'home', section: { id: 'docs_content', type: 'content', blocks: [{ id: 'intro', type: 'paragraph', text: 'Hello docs' }] } },
       { op: 'content.block.add', section: 'docs_content', block: { id: 'install', type: 'code', language: 'bash', code: 'npm run build' } },
+      { op: 'content.block.move', section: 'docs_content', block: 'install', before: 'intro' },
       { op: 'content.block.update', section: 'docs_content', block: 'intro', value: { text: 'Updated docs' } },
       { op: 'content.block.remove', section: 'docs_content', block: 'install' },
+      {
+        op: 'content.blocks.set',
+        section: 'docs_content',
+        blocks: [
+          { id: 'intro', type: 'paragraph', text: 'Reset docs' },
+          { id: 'more', type: 'link', text: 'More', href: '/docs' },
+        ],
+      },
       { op: 'section.move', page: 'home', section: 'leads_table', before: 'lead_form' },
       { op: 'component.add', section: 'lead_form', component: { id: 'hint', type: 'text', text: 'Hello' } },
       { op: 'api.route.create', id: 'list_leads_api', method: 'GET', path: '/api/leads', action: 'list_leads' },
@@ -118,8 +129,8 @@ test('new patch operations mutate intent by semantic objects', () => {
   assert.equal(ast.pages[0].sections[1].id, 'leads_table')
   assert.equal(ast.pages[0].sections[2].id, 'lead_form')
   assert.equal(ast.pages[0].sections[2].components[0].id, 'hint')
-  assert.equal(ast.pages[0].sections[3].blocks[0].text, 'Updated docs')
-  assert.equal(ast.pages[0].sections[3].blocks.length, 1)
+  assert.equal(ast.pages[0].sections[3].blocks[0].text, 'Reset docs')
+  assert.equal(ast.pages[0].sections[3].blocks[1].type, 'link')
   assert.equal(ast.api.routes[0].action, 'list_leads')
   assert.equal(ast.pages[0].layout_config.width, 'xl')
 })
