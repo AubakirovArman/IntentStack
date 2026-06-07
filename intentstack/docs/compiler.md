@@ -20,6 +20,7 @@ Current commands:
 - `openapi`: export an OpenAPI 3.1 spec from intent entities and record actions.
 - `testgen`: generate API contract tests from intent record actions.
 - `deploy`: prepare provider deployment config for Vercel, Netlify, or Render.
+- `themes`: list local theme packs and apply them through intent writeback.
 - `migrate`: currently no-op for DSL `0.1`.
 - `list_capabilities`: print targets, components, actions, field types and patch ops.
 

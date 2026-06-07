@@ -22,6 +22,8 @@ node src/index.js graph --project <dir> --html graph.html
 node src/index.js openapi --project <dir> --out openapi.yaml
 node src/index.js testgen --project <dir> --out tests/generated
 node src/index.js deploy --project <dir> --platform vercel --out app
+node src/index.js themes --json
+node src/index.js themes enterprise --project <dir> --write
 node src/index.js stats --project <dir> --json
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
@@ -49,6 +51,7 @@ compiler. It is intentionally not a full Rust port yet.
 - `split --write` migrates a monolith intent into modular files.
 - `graph --html` shows module source files and ownership for modular projects.
 - Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
+- `themes` lists local theme packs and can apply one back into modular intent.
 
 ## Modular Example
 

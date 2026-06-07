@@ -31,6 +31,7 @@ test('list_capabilities exposes target capabilities and patch ops as JSON', () =
   assert.equal(data.domain_modules.web_crud.status, 'active')
   assert.equal(data.domain_modules.auth_permissions.status, 'partial')
   assert.equal(data.domain_modules.visual_graph.status, 'partial')
+  assert.ok(data.theme_packs.some((theme) => theme.id === 'enterprise'))
 })
 
 test('schema command exposes the DSL JSON Schema', () => {
@@ -47,6 +48,32 @@ test('schema command exposes the DSL JSON Schema', () => {
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.type.enum.includes('table'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.type.enum.includes('example'))
   assert.equal(schema.properties.pages.items.properties.sections.items.properties.blocks.items.properties.section.type, 'string')
+})
+
+test('themes lists and applies theme packs through modular writeback', () => {
+  const listed = run(['themes', '--json'])
+  assert.equal(listed.status, 0, listed.stderr)
+  const packs = JSON.parse(listed.stdout)
+  assert.ok(packs.themes.some((theme) => theme.id === 'enterprise'))
+
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-theme-'))
+  try {
+    const created = run(['new', dir, '--name', 'Theme App'])
+    assert.equal(created.status, 0, created.stderr)
+    const dry = run(['themes', 'enterprise', '--project', dir])
+    assert.equal(dry.status, 0, dry.stderr)
+    assert.match(dry.stdout, /dry run/)
+    assert.doesNotMatch(readFileSync(join(dir, 'intent/shared/theme.yaml'), 'utf8'), /enterprise/)
+
+    const applied = run(['themes', '--apply', 'enterprise', '--project', dir, '--write'])
+    assert.equal(applied.status, 0, applied.stderr)
+    assert.match(readFileSync(join(dir, 'intent/shared/theme.yaml'), 'utf8'), /preset: enterprise/)
+    assert.match(readFileSync(join(dir, 'intent/shared/theme.yaml'), 'utf8'), /density: compact/)
+    const checked = run(['check', '--project', dir])
+    assert.equal(checked.status, 0, checked.stderr)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('new creates a checkable project and migrate handles v0.1 no-op', () => {

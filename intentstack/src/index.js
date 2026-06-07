@@ -21,6 +21,7 @@ import { generateDocsSite } from './docs_site.js'
 import { formatOpenApi, generateOpenApi, openApiFormat } from './openapi.js'
 import { generateTestFiles } from './testgen.js'
 import { deploymentPlan } from './deploy.js'
+import { getThemePack, listThemePacks } from './themes.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -82,6 +83,7 @@ async function main() {
       field_types: FIELD_TYPES,
       patch_ops: patchOps(),
       domain_modules: DOMAIN_MODULES,
+      theme_packs: listThemePacks(),
     }
     if (args.includes('--json')) console.log(JSON.stringify(data, null, 2))
     else {
@@ -96,6 +98,8 @@ async function main() {
       for (const op of data.patch_ops) console.log('  ' + op)
       console.log('\nDomain modules:')
       for (const [id, m] of Object.entries(data.domain_modules)) console.log(`  ${id} (${m.version}, ${m.status})`)
+      console.log('\nTheme packs:')
+      for (const pack of data.theme_packs) console.log(`  ${pack.id}: ${pack.label}`)
     }
     return
   }
@@ -145,6 +149,43 @@ async function main() {
   }
 
   const cfg = await readConfig(projectDir)
+
+  if (cmd === 'themes') {
+    const apply = flag('apply', flag('preset', (args[1] && !args[1].startsWith('--')) ? args[1] : null))
+    if (!apply) {
+      const packs = listThemePacks()
+      if (args.includes('--json')) console.log(JSON.stringify({ themes: packs }, null, 2))
+      else {
+        console.log('Theme packs:')
+        for (const pack of packs) console.log(`  ${pack.id}: ${pack.label} - ${pack.description}`)
+      }
+      return
+    }
+    const pack = getThemePack(apply)
+    if (!pack) {
+      console.error(`Unknown theme pack "${apply}". Available: ${listThemePacks().map((item) => item.id).join(', ')}`)
+      process.exit(2)
+    }
+    const { intentPath, ast } = await loadAst(projectDir, cfg)
+    const before = ast.theme || {}
+    ast.theme = { ...pack.theme }
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, cfg.out || 'app') })
+    console.log(`\nIntentStack themes - ${intentPath}`)
+    console.log(`Apply: ${pack.id} (${pack.label})`)
+    console.log(`old: ${JSON.stringify(before)}`)
+    console.log(`new: ${JSON.stringify(ast.theme)}`)
+    console.log('\nValidation:')
+    console.log(d.format())
+    if (d.hasErrors()) { console.error(`\nx theme pack would introduce ${d.errors.length} error(s) - NOT written.`); process.exit(1) }
+    if (args.includes('--write')) {
+      const written = await writeIntentProject(ast, intentPath)
+      console.log(`\nok theme written (${written.length} file(s)).`)
+    } else {
+      console.log('\n(dry run - add --write to persist)')
+    }
+    return
+  }
 
   if (cmd === 'split') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
@@ -624,6 +665,7 @@ function help() {
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
     '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',
+    '  intentstack themes  [--json|--apply PRESET --write]              list/apply theme packs',
     '  intentstack stats   [--project DIR] [--json] [--out-stats FILE]  print app/compiler metrics',
     '  intentstack security [--project DIR] [--json] [--strict]          audit security posture',
     '  intentstack docs    [--project DIR] [--out DIR]                  generate static docs site',
