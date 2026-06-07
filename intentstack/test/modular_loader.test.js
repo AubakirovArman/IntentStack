@@ -52,6 +52,57 @@ includes:
   }
 })
 
+test('loader rejects explicit include files that do not exist', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-missing-include-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: missing_include
+  target: web_ts_minimal
+includes:
+  - shared/navigation.yaml
+`)
+
+    await assert.rejects(
+      () => loadIntentProject(dir, {}),
+      /Include "shared\/navigation\.yaml" does not exist/,
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('validator warns when a non-optional include glob matches no files', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-empty-include-'))
+  try {
+    mkdirSync(join(dir, 'intent/frontend/pages'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: empty_include
+  target: web_ts_minimal
+includes:
+  - shared/*.yaml
+  - frontend/pages/*.yaml
+`)
+    writeFileSync(join(dir, 'intent/frontend/pages/home.yaml'), `page:
+  id: home
+  path: /
+  sections:
+    - id: hero
+      type: hero
+      title: Empty include warning
+`)
+
+    const { ast } = await loadIntentProject(dir, {})
+    const d = validate(ast)
+    assert.equal(d.hasErrors(), false)
+    assert.ok(d.warnings.some((item) => item.code === 'W1100' && item.message.includes('shared/*.yaml')))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('loader resolves frontend page and section modules by ref', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-frontend-modules-'))
   try {

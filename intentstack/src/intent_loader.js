@@ -52,7 +52,15 @@ export async function assembleIntent(root, rootPath) {
   }
   mergeDoc(state, stripIncludes(root), rootPath)
 
-  const files = includes.flatMap((pattern) => expandInclude(rootDir, pattern)).sort()
+  const includeResults = includes.map((pattern) => expandInclude(rootDir, pattern))
+  const includeErrors = includeResults.filter((result) => result.error)
+  if (includeErrors.length) {
+    throw new Error(includeErrors.map((result) => result.error).join('\n'))
+  }
+  const unresolvedIncludes = includeResults
+    .filter((result) => result.files.length === 0 && !result.optional)
+    .map((result) => ({ pattern: result.pattern, root: result.searchRoot }))
+  const files = includeResults.flatMap((result) => result.files).sort()
   for (const file of files) {
     const doc = await parseIntentFile(file)
     state.sourceFiles.push(file)
@@ -65,6 +73,7 @@ export async function assembleIntent(root, rootPath) {
     modular: true,
     rootPath,
     includes,
+    unresolvedIncludes,
     sourceFiles: [...new Set(state.sourceFiles)],
     owners: state.owners,
     pathFiles,
@@ -354,11 +363,34 @@ function attachMetadata(ast, metadata) {
 
 function expandInclude(rootDir, pattern) {
   const absolutePattern = normalizePath(resolve(rootDir, pattern))
-  if (!pattern.includes('*')) return existsSync(absolutePattern) ? [absolutePattern] : []
+  if (!pattern.includes('*')) {
+    return existsSync(absolutePattern)
+      ? { pattern, files: [absolutePattern], searchRoot: absolutePattern, optional: false }
+      : { pattern, files: [], searchRoot: absolutePattern, optional: false, error: `Include "${pattern}" does not exist.` }
+  }
   const searchRoot = includeSearchRoot(rootDir, pattern)
   const files = walkFiles(searchRoot)
   const re = globRegex(absolutePattern)
-  return files.filter((file) => re.test(normalizePath(file)))
+  return {
+    pattern,
+    files: files.filter((file) => re.test(normalizePath(file))),
+    searchRoot,
+    optional: optionalEmptyInclude(pattern),
+  }
+}
+
+function optionalEmptyInclude(pattern) {
+  const p = normalizePath(pattern).replace(/^\.\//, '')
+  return [
+    'backend/workflows/*.yaml',
+    'backend/workflows/*.yml',
+    'backend/workflows/**/*.yaml',
+    'backend/workflows/**/*.yml',
+    'backend/integrations/*.yaml',
+    'backend/integrations/*.yml',
+    'backend/integrations/**/*.yaml',
+    'backend/integrations/**/*.yml',
+  ].includes(p)
 }
 
 function includeSearchRoot(rootDir, pattern) {

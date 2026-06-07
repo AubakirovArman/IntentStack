@@ -4,17 +4,20 @@ import { dirname, resolve } from 'node:path'
 
 export function applyPatch(ast, patchDoc) {
   const ops = patchDoc?.patch || patchDoc?.ops || []
+  const draft = cloneWithMetadata(ast)
   const changes = []
   const errors = []
   ops.forEach((op, idx) => {
     const fn = OPS[op.op]
     if (!fn) { errors.push(`patch[${idx}]: unknown op "${op.op}"`); return }
     try {
-      changes.push({ op: op.op, ...fn(ast, op) })
+      changes.push({ op: op.op, ...fn(draft, op) })
     } catch (e) {
       errors.push(`patch[${idx}] (${op.op}): ${e.message}`)
     }
   })
+  if (errors.length === 0) commitDraft(ast, draft)
+  else changes.length = 0
   return { ast, changes, errors }
 }
 
@@ -84,6 +87,27 @@ function resolvePath(ast, path) {
 const fieldId = (f) => (typeof f === 'string' ? f : (f.name || f.id))
 const colId = fieldId
 const clone = (x) => JSON.parse(JSON.stringify(x))
+
+function cloneWithMetadata(ast) {
+  const draft = clone(ast)
+  if (ast?.__intentstack) defineMetadata(draft, clone(ast.__intentstack))
+  return draft
+}
+
+function commitDraft(target, draft) {
+  for (const key of Object.keys(target)) delete target[key]
+  for (const [key, value] of Object.entries(draft)) target[key] = value
+  if (draft?.__intentstack) defineMetadata(target, clone(draft.__intentstack))
+}
+
+function defineMetadata(target, metadata) {
+  Object.defineProperty(target, '__intentstack', {
+    value: metadata,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  })
+}
 
 function updateObject(target, op, excluded = ['op', 'id']) {
   const before = clone(target)

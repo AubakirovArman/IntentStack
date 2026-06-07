@@ -77,6 +77,35 @@ test('patchOps exposes the PRD command surface implemented by the compiler', () 
   }
 })
 
+test('applyPatch is atomic when a later operation fails', () => {
+  const ast = {
+    version: 0.1,
+    project: { id: 'atomic_patch', target: 'web_ts_minimal' },
+    entities: [],
+    actions: [],
+    pages: [
+      {
+        id: 'home',
+        path: '/',
+        sections: [{ id: 'hero', type: 'hero', title: 'Original' }],
+      },
+    ],
+  }
+  const before = JSON.stringify(ast)
+
+  const { changes, errors } = applyPatch(ast, {
+    patch: [
+      { op: 'text.set', target: 'page.home.section.hero.id', value: 'renamed_hero' },
+      { op: 'text.set', target: 'page.home.section.hero.title', value: 'Should not apply' },
+    ],
+  })
+
+  assert.equal(changes.length, 0)
+  assert.equal(errors.length, 1)
+  assert.match(errors[0], /cannot resolve target/)
+  assert.equal(JSON.stringify(ast), before)
+})
+
 test('new patch operations mutate intent by semantic objects', () => {
   const ast = {
     version: 0.1,

@@ -36,6 +36,14 @@ export function validate(ast, opts = {}) {
   if (ast.version == null) d.warn('W1001', 'Missing "version". Assuming 0.1.', { path: 'version' })
   else if (![0.1, '0.1'].includes(ast.version)) d.error('E0002', `Unsupported DSL version "${ast.version}". This compiler supports 0.1.`, { path: 'version' })
 
+  for (const include of ast.__intentstack?.unresolvedIncludes || []) {
+    d.warn('W1100', `Include pattern "${include.pattern}" matched no files.`, {
+      path: 'includes',
+      file: ast.__intentstack?.rootPath,
+      suggestion: 'Check the include path, create a matching module file, or remove the unused include.',
+    })
+  }
+
   const project = ast.project
   if (!project || !project.id) d.error('E2001', 'project.id is required.', { path: 'project.id' })
   const targetId = project?.target
