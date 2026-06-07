@@ -199,6 +199,49 @@ test('build reports normalize, format and verify phases', () => {
   }
 })
 
+test('build preserves migration history and adds schema evolution migration', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-migration-evolution-'))
+  try {
+    const created = run(['new', dir, '--single-file', '--name', 'Migration App'])
+    assert.equal(created.status, 0, created.stderr)
+    const out = join(dir, 'app')
+    const first = run(['build', '--project', dir, '--out', out, '--no-format', '--no-verify'])
+    assert.equal(first.status, 0, first.stderr)
+    const initPath = join(out, 'migrations/0000_init.sql')
+    const initialSql = readFileSync(initPath, 'utf8')
+    const firstManifest = JSON.parse(readFileSync(join(out, 'migrations/manifest.json'), 'utf8'))
+    assert.equal(firstManifest.migrations.length, 1)
+    assert.match(firstManifest.schema_checksum, /^[a-f0-9]{64}$/)
+
+    const patch = join(dir, 'add-company.patch.yaml')
+    writeFileSync(patch, `version: 0.1
+patch:
+  - op: entity.field.add
+    entity: Lead
+    field:
+      id: company
+      type: string
+      required: false
+`)
+    const applied = run(['apply', patch, '--project', dir, '--write'])
+    assert.equal(applied.status, 0, applied.stderr)
+    const second = run(['build', '--project', dir, '--out', out, '--no-format', '--no-verify'])
+    assert.equal(second.status, 0, second.stderr)
+
+    assert.equal(readFileSync(initPath, 'utf8'), initialSql)
+    const updateSql = readFileSync(join(out, 'migrations/0001_update.sql'), 'utf8')
+    assert.match(updateSql, /ALTER TABLE leads ADD COLUMN company text;/)
+    const manifest = JSON.parse(readFileSync(join(out, 'migrations/manifest.json'), 'utf8'))
+    assert.equal(manifest.migrations.length, 2)
+    assert.equal(manifest.migrations[0].id, '0000_init')
+    assert.equal(manifest.migrations[1].id, '0001_update')
+    assert.equal(manifest.migrations[1].previous_schema_checksum, firstManifest.schema_checksum)
+    assert.notEqual(manifest.schema_checksum, firstManifest.schema_checksum)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('split writes a monolith intent into modular files', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-split-'))
   try {
