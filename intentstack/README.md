@@ -19,6 +19,7 @@ node src/index.js split --project <dir> --write
 node src/index.js list_capabilities --json
 node src/index.js schema --out schema/intent.v0.1.schema.json
 node src/index.js graph --project <dir> --html graph.html
+node src/index.js editor --project <dir> --out editor.html
 node src/index.js openapi --project <dir> --out openapi.yaml
 node src/index.js testgen --project <dir> --out tests/generated
 node src/index.js deploy --project <dir> --platform vercel --out app
@@ -50,6 +51,7 @@ compiler. It is intentionally not a full Rust port yet.
 - `section.module.add` creates new section modules and inserts page refs in one patch op.
 - `split --write` migrates a monolith intent into modular files.
 - `graph --html` shows module source files and ownership for modular projects.
+- `editor` exports the same visual graph plus Patch Builder as an explicit visual editing entrypoint.
 - Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
 - `themes` lists local theme packs and can apply one back into modular intent.
 

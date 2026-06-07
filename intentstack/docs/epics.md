@@ -14,7 +14,7 @@ Status legend:
 4. Full patch command set: `done`. The PRD command surface is implemented and exposed through `patchOps()`/`list_capabilities`.
 5. UI component catalog: `done`. `navbar`, `hero`, `card_grid`, `pricing_cards`, `stats`, `form`, `table`, `record_detail`, `footer`, `custom_component` are supported.
 6. CRUD completeness: `done`. CRUD routes and clients are generated; dashboard row actions support detail/edit/delete, and dedicated dynamic record detail pages are generated for both targets.
-7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `openapi`, `testgen`, `deploy`, `themes`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
+7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `editor`, `openapi`, `testgen`, `deploy`, `themes`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
 8. Generated/custom extension model: `done`. `custom_component` validates source/export, validates declared props schemas, and emits wrappers with typed props for both targets.
 9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff, generated API contract tests, and examples x targets verify tests exist; GitHub Actions runs lint, Node tests, Rust tests, and generated app build matrix for both targets.
 10. Docs and AI-agent protocol: `done`. Core docs exist, AGENTS/README are current, and `intentstack docs --out` generates a static documentation site.
@@ -53,3 +53,4 @@ Status legend:
 37. Deploy preparation: `done`. `intentstack deploy --platform vercel|netlify|render` validates intent, can prepare the generated app, writes provider config files, and prints the next provider command without triggering remote login by default.
 38. Observability surface: `done`. Generated Web/Hono and Next apps expose `/api/health` and `/api/metrics`; Web tracks request counts by path and last request duration, while Next exposes runtime uptime/counts for the metrics route.
 39. Theme marketplace v0: `done`. A local `themes` registry exposes reusable theme packs, `intentstack themes --json` lists them, and `intentstack themes <preset> --write` applies a pack through modular intent writeback.
+40. Visual editor v0: `done`. `intentstack editor --out editor.html` exports the visual graph plus semantic Patch Builder as a dedicated editor entrypoint for non-code intent changes.

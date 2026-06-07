@@ -359,6 +359,20 @@ async function main() {
     return
   }
 
+  if (cmd === 'editor') {
+    const { intentPath, ast } = await loadAst(projectDir, cfg)
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
+    if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
+    const graph = buildGraph(coreAst)
+    const outPath = resolve(flag('out', 'intentstack-editor.html'))
+    mkdirSync(dirname(outPath), { recursive: true })
+    writeFileSync(outPath, renderGraphHtml(graphSummary(graph), readPatchHistory(intentPath)))
+    console.log(`ok visual editor written -> ${outPath}`)
+    console.log('Open the file in a browser and use Patch Builder for semantic edits.')
+    return
+  }
+
   if (cmd === 'openapi') {
     const { ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -662,6 +676,7 @@ function help() {
     '  intentstack explain page.<id>.section.<id>                      show how a node compiles',
     '  intentstack doctor  [--project DIR]                             validate environment and plan',
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
+    '  intentstack editor  [--project DIR] [--out FILE]                 export visual patch editor',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
     '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',

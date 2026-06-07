@@ -359,6 +359,21 @@ test('graph HTML renders module graph for modular projects', () => {
   }
 })
 
+test('editor command exports the visual patch editor', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-editor-'))
+  try {
+    const out = join(dir, 'editor.html')
+    const res = run(['editor', '--project', 'demo', '--out', out])
+    assert.equal(res.status, 0, res.stderr)
+    assert.match(res.stdout, /visual editor written/)
+    const html = readFileSync(out, 'utf8')
+    assert.match(html, /Patch Builder/)
+    assert.match(html, /voice_agent_site/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('apply --write records patch history used by graph HTML', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-history-'))
   try {
