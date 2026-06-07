@@ -1,0 +1,27 @@
+section:
+  id: docs_component_pricing_code
+  type: content
+  title: Patch code for pricing_cards
+  toc: false
+  blocks:
+    - id: pricing_patch
+      type: code
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: section.module.add
+            page: docs
+            after: docs_component_table_code
+            section:
+              id: docs_component_pricing
+              type: pricing_cards
+              title: Live pricing_cards example
+              items:
+                - title: Starter
+                  price: from $300
+                  features: [One room or product, Two camera angles]
+                - title: Studio
+                  price: from $900
+                  features: [Three scenes, Styled lighting, Revision pass]
+page: docs

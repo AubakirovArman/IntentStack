@@ -5,8 +5,13 @@ page:
   sections:
     - ref: docs_content
     - ref: docs_component_cards
+    - ref: docs_component_cards_code
     - ref: docs_component_form
+    - ref: docs_component_form_code
     - ref: docs_component_table
+    - ref: docs_component_table_code
     - ref: docs_component_pricing
+    - ref: docs_component_pricing_code
     - ref: docs_component_stats
+    - ref: docs_component_stats_code
     - ref: docs_footer

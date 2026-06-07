@@ -5,10 +5,15 @@
 import { AppNav } from '../components/AppNav'
 import { DocsContent } from '../components/DocsContent'
 import { DocsComponentCards } from '../components/DocsComponentCards'
+import { DocsComponentCardsCode } from '../components/DocsComponentCardsCode'
 import { DocsComponentForm } from '../components/DocsComponentForm'
+import { DocsComponentFormCode } from '../components/DocsComponentFormCode'
 import { DocsComponentTable } from '../components/DocsComponentTable'
+import { DocsComponentTableCode } from '../components/DocsComponentTableCode'
 import { DocsComponentPricing } from '../components/DocsComponentPricing'
+import { DocsComponentPricingCode } from '../components/DocsComponentPricingCode'
 import { DocsComponentStats } from '../components/DocsComponentStats'
+import { DocsComponentStatsCode } from '../components/DocsComponentStatsCode'
 import { DocsFooter } from '../components/DocsFooter'
 
 
@@ -18,10 +23,15 @@ export function DocsPage() {
       <AppNav />
       <DocsContent />
       <DocsComponentCards />
+      <DocsComponentCardsCode />
       <DocsComponentForm />
+      <DocsComponentFormCode />
       <DocsComponentTable />
+      <DocsComponentTableCode />
       <DocsComponentPricing />
+      <DocsComponentPricingCode />
       <DocsComponentStats />
+      <DocsComponentStatsCode />
       <DocsFooter />
     </main>
   )

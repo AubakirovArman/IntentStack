@@ -2,10 +2,15 @@
 import { AppNav } from '@/components/generated/AppNav'
 import { DocsContent } from '@/components/generated/DocsContent'
 import { DocsComponentCards } from '@/components/generated/DocsComponentCards'
+import { DocsComponentCardsCode } from '@/components/generated/DocsComponentCardsCode'
 import { DocsComponentForm } from '@/components/generated/DocsComponentForm'
+import { DocsComponentFormCode } from '@/components/generated/DocsComponentFormCode'
 import { DocsComponentTable } from '@/components/generated/DocsComponentTable'
+import { DocsComponentTableCode } from '@/components/generated/DocsComponentTableCode'
 import { DocsComponentPricing } from '@/components/generated/DocsComponentPricing'
+import { DocsComponentPricingCode } from '@/components/generated/DocsComponentPricingCode'
 import { DocsComponentStats } from '@/components/generated/DocsComponentStats'
+import { DocsComponentStatsCode } from '@/components/generated/DocsComponentStatsCode'
 import { DocsFooter } from '@/components/generated/DocsFooter'
 
 
@@ -15,10 +20,15 @@ export default function Page() {
       <AppNav />
       <DocsContent />
       <DocsComponentCards />
+      <DocsComponentCardsCode />
       <DocsComponentForm />
+      <DocsComponentFormCode />
       <DocsComponentTable />
+      <DocsComponentTableCode />
       <DocsComponentPricing />
+      <DocsComponentPricingCode />
       <DocsComponentStats />
+      <DocsComponentStatsCode />
       <DocsFooter />
     </main>
   )

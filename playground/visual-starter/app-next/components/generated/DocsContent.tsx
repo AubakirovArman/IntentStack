@@ -15,11 +15,6 @@ export function DocsContent() {
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#targets">{"Targets"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#diagnostics">{"Diagnostics and safety"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#authoring-examples">{"Authoring examples"}</a>
-            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#cards-example">{"Add cards"}</a>
-            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#form-example">{"Add a form"}</a>
-            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#table-example">{"Add a table"}</a>
-            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#pricing-stats-example">{"Add pricing or stats"}</a>
-            <a className="ml-3 block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#page-nav-example">{"Add a page and navigation item"}</a>
             <a className="block py-1 text-muted-foreground transition-colors hover:text-foreground" href="#current-limits">{"Current limits"}</a>
           </nav>
         </aside>
@@ -77,7 +72,7 @@ export function DocsContent() {
             <li>{"diff, graph, stats, security, and verify commands help audit intent and output."}</li>
           </ul>
           <h2 id="authoring-examples" className="pt-4 text-2xl font-semibold tracking-tight">{"Authoring examples"}</h2>
-          <p className="text-base leading-7 text-muted-foreground">{"These snippets show the normal way to extend an app. Save a focused patch file, run intentstack apply as a dry run, then run it again with --write so the modular owner files are updated safely."}</p>
+          <p className="text-base leading-7 text-muted-foreground">{"Each example below is paired: the generated live component appears first, and the patch code that creates the same kind of component appears directly below it."}</p>
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
@@ -116,28 +111,13 @@ export function DocsContent() {
               </tbody>
             </table>
           </div>
-          <h3 id="cards-example" className="pt-3 text-xl font-semibold">{"Add cards"}</h3>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
-          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: section.add\n    page: home\n    after: hero\n    section:\n      id: services\n      type: card_grid\n      title: Services\n      columns: 3\n      items:\n        - title: Interior renders\n          text: Room scenes with materials, lighting, and camera direction.\n        - title: Product shots\n          text: Studio-style visuals for catalogs and landing pages.\n        - title: Animation frames\n          text: Key frames for motion concepts and presentations.\n"}</code></pre>
-          <h3 id="form-example" className="pt-3 text-xl font-semibold">{"Add a form"}</h3>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
-          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: entity.create\n    id: Brief\n    table: briefs\n    fields:\n      - id: name\n        type: string\n        label: Name\n        required: true\n      - id: email\n        type: string\n        label: Email\n        required: true\n      - id: project_type\n        type: enum\n        label: Project type\n        values: [interior, product, animation]\n      - id: notes\n        type: text\n        label: Notes\n  - op: action.create\n    id: create_brief\n    type: create_record\n    entity: Brief\n  - op: form.add\n    page: home\n    id: brief_form\n    title: Request a visualization brief\n    entity: Brief\n    fields: [name, email, project_type, notes]\n    action: create_brief\n"}</code></pre>
-          <h3 id="table-example" className="pt-3 text-xl font-semibold">{"Add a table"}</h3>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
-          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: action.create\n    id: list_briefs\n    type: list_records\n    entity: Brief\n  - op: page.create\n    id: dashboard_briefs\n    path: /dashboard/briefs\n    layout: dashboard\n  - op: table.add\n    page: dashboard_briefs\n    id: briefs_table\n    entity: Brief\n    action: list_briefs\n    columns: [name, email, project_type]\n"}</code></pre>
-          <h3 id="pricing-stats-example" className="pt-3 text-xl font-semibold">{"Add pricing or stats"}</h3>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
-          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: section.add\n    page: home\n    after: process\n    section:\n      id: pricing\n      type: pricing_cards\n      title: Visualization packages\n      items:\n        - title: Concept\n          price: from $300\n          features: [One room, Two angles, Basic material pass]\n        - title: Presentation\n          price: from $900\n          features: [Three scenes, Styled lighting, Revision pass]\n  - op: section.add\n    page: home\n    after: pricing\n    section:\n      id: proof\n      type: stats\n      title: Delivery metrics\n      items:\n        - label: Average first draft\n          value: 3 days\n        - label: Supported formats\n          value: 6+\n"}</code></pre>
-          <h3 id="page-nav-example" className="pt-3 text-xl font-semibold">{"Add a page and navigation item"}</h3>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{"yaml"}</div>
-          <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{"version: 0.1\npatch:\n  - op: page.create\n    id: case_studies\n    path: /case-studies\n    layout: docs\n    sections:\n      - id: case_studies_content\n        type: content\n        title: Case studies\n        blocks:\n          - id: intro\n            type: paragraph\n            text: Show examples of previous visualization work.\n  - op: navigation.item.add\n    item:\n      label: Case studies\n      href: /case-studies\n"}</code></pre>
           <div className="rounded-lg border bg-muted/50 p-4">
             <p className="font-semibold">{"Practical rule"}</p>
             <p className="leading-7 text-muted-foreground">{"Keep each patch focused. One page, one section, or one entity change is easier to review and easier to roll back."}</p>
           </div>
           <div className="rounded-lg border bg-muted/50 p-4">
-            <p className="font-semibold">{"Live components below"}</p>
-            <p className="leading-7 text-muted-foreground">{"The next sections are actual generated components from separate intent modules: a card grid, a working form, a data table, pricing cards, and stats."}</p>
+            <p className="font-semibold">{"Live example + code"}</p>
+            <p className="leading-7 text-muted-foreground">{"Read each example as a pattern: inspect the generated component, then copy the patch below it and adapt the ids, text, fields, or records for your app."}</p>
           </div>
           <h2 id="current-limits" className="pt-4 text-2xl font-semibold tracking-tight">{"Current limits"}</h2>
           <ul className="list-disc space-y-2 pl-6 text-muted-foreground">

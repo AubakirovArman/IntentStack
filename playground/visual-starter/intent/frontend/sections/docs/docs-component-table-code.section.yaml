@@ -1,0 +1,27 @@
+section:
+  id: docs_component_table_code
+  type: content
+  title: Patch code for table
+  toc: false
+  blocks:
+    - id: table_patch
+      type: code
+      language: yaml
+      code: |
+        version: 0.1
+        patch:
+          - op: action.create
+            id: list_demo_requests
+            type: list_records
+            entity: DemoRequest
+          - op: section.module.add
+            page: docs
+            after: docs_component_form_code
+            section:
+              id: docs_component_table
+              type: table
+              entity: DemoRequest
+              source:
+                action: list_demo_requests
+              columns: [name, email, project_type, budget]
+page: docs
