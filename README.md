@@ -94,9 +94,9 @@ Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, 
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; durable workflow run log/retry; workflow/integration metadata and provider-specific integration clients;
-webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; SQLite database driver abstraction for schema, migrations, clients, package deps and app docs; visual editor export; context-aware patch suggestions; voice/text-to-patch commands; Rust `intent_core` with YAML/JSON parsing, semantic diagnostics, symbol table, resolved refs, typed graph, bindings and pass summaries; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust core/wrapper tests, and generated app build matrix.
+webhook dispatch; realtime `subscribe_records` streams; optional multi-tenant record isolation; SQLite database driver abstraction for schema, migrations, clients, package deps and app docs; visual editor HTML export plus local `editor --serve` patch-apply/writeback server; context-aware patch suggestions; voice/text-to-patch commands; Rust `intent_core` with YAML/JSON parsing, semantic diagnostics, symbol table, resolved refs, typed graph, bindings and pass summaries; generated health/metrics endpoints; trace context headers and structured request logs; generated API contract tests; deploy config generation; external plugin target loading; local theme packs and marketplace listing; GitHub Actions CI for compiler lint/tests, Rust core/wrapper tests, and generated app build matrix.
 
-Still partial: full Rust emitter parity and a full visual editor.
+Still partial: full Rust emitter parity and drag-and-drop visual editing.
 
 ## The agent loop (patches)
 

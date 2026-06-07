@@ -26,6 +26,7 @@ import { collaborationReport, formatCollabReport } from './collab.js'
 import { loadConfiguredPlugins } from './plugins.js'
 import { intentSuggestions } from './suggestions.js'
 import { voiceToPatch } from './voice_intent.js'
+import { startEditorServer } from './editor_server.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -445,6 +446,21 @@ async function main() {
   }
 
   if (cmd === 'editor') {
+    if (args.includes('--serve')) {
+      const port = Number(flag('port', 4321))
+      const host = flag('host', '127.0.0.1')
+      const started = await startEditorServer({
+        projectDir,
+        cfg,
+        outDir: flag('out', cfg.out || 'app'),
+        targetOverride: flag('target', null),
+        port,
+        host,
+      })
+      console.log(`ok visual editor server listening -> http://${started.host}:${started.port}`)
+      console.log('Use Ctrl+C to stop. Patches are applied through intent writeback.')
+      return
+    }
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
     const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, flag('out', cfg.out || 'app')) })
@@ -454,7 +470,7 @@ async function main() {
     mkdirSync(dirname(outPath), { recursive: true })
     writeFileSync(outPath, renderGraphHtml(graphSummary(graph), readPatchHistory(intentPath)))
     console.log(`ok visual editor written -> ${outPath}`)
-    console.log('Open the file in a browser and use Patch Builder for semantic edits.')
+    console.log('Open the file in a browser and use Patch Builder for semantic edits, or run editor --serve to apply patches from the UI.')
     return
   }
 
@@ -764,7 +780,7 @@ function help() {
     '  intentstack collab  [--project DIR] [--base REF] [--json]       inspect git/module owner changes',
     '  intentstack suggest [--project DIR] [--json] [--limit N]         suggest semantic patch templates',
     '  intentstack voice   "add pricing section" [--json]              convert voice/text intent to patch',
-    '  intentstack editor  [--project DIR] [--out FILE]                 export visual patch editor',
+    '  intentstack editor  [--project DIR] [--out FILE|--serve]         export or serve visual patch editor',
     '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
     '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',
