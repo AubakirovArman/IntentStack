@@ -137,6 +137,82 @@ test('security reports dashboard and mutation findings as JSON', () => {
   assert.ok(data.findings.some((item) => item.code === 'SEC_PUBLIC_MUTATION'))
 })
 
+test('openapi exports CRUD contract as JSON and YAML', () => {
+  const res = run(['openapi', '--project', 'demo'])
+  assert.equal(res.status, 0, res.stderr)
+  const data = JSON.parse(res.stdout)
+  assert.equal(data.openapi, '3.1.0')
+  assert.equal(data.info.title, 'VoiceAgent')
+  assert.equal(data.paths['/api/leads'].get.operationId, 'list_leads')
+  assert.equal(data.paths['/api/leads'].post.operationId, 'create_lead')
+  assert.equal(data.paths['/api/leads/{id}'].get.operationId, 'get_lead')
+  assert.equal(data.paths['/api/leads/{id}'].put.operationId, 'update_lead')
+  assert.equal(data.components.schemas.Lead.properties.status.enum[0], 'new')
+  assert.deepEqual(data.components.schemas.LeadInput.required, ['name', 'phone'])
+
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-openapi-'))
+  try {
+    const out = join(dir, 'openapi.yaml')
+    const written = run(['openapi', '--project', 'demo', '--out', out])
+    assert.equal(written.status, 0, written.stderr)
+    assert.match(written.stdout, /ok OpenAPI yaml written/)
+    assert.match(readFileSync(out, 'utf8'), /openapi:\s+3\.1\.0/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('openapi documents auth roles and CSRF only for protected unsafe methods', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-openapi-auth-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: openapi_auth
+  name: OpenAPI Auth
+  target: web_ts_minimal
+auth:
+  roles: [admin]
+  users:
+    - id: admin
+      role: admin
+      password: env:ADMIN_PASSWORD
+entities:
+  - id: Lead
+    fields:
+      - id: name
+        type: string
+        required: true
+actions:
+  - id: list_leads
+    type: list_records
+    entity: Lead
+    auth: admin
+  - id: create_lead
+    type: create_record
+    entity: Lead
+    auth: admin
+pages:
+  - id: home
+    path: /
+    sections:
+      - id: hero
+        type: hero
+        title: Home
+`)
+    const res = run(['openapi', '--project', dir])
+    assert.equal(res.status, 0, res.stderr)
+    const data = JSON.parse(res.stdout)
+    assert.deepEqual(data.paths['/api/lead'].get.security, [{ intentstackSession: [] }])
+    assert.deepEqual(data.paths['/api/lead'].get['x-intentstack-roles'], ['admin'])
+    assert.equal(data.paths['/api/lead'].get.parameters, undefined)
+    assert.ok(data.paths['/api/lead'].post.parameters.some((item) => item.name === 'X-CSRF-Token'))
+    assert.ok(data.paths['/api/auth/login'].post)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('verify checks examples across both supported targets', () => {
   const res = run(['verify', '--examples', 'intentstack/examples', '--targets', 'web_ts_minimal,next_shadcn'])
   assert.equal(res.status, 0, res.stderr)

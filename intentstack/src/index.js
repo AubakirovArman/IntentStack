@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// IntentStack v0.1 CLI — reference implementation.
+// IntentStack v0.1 CLI - reference implementation.
 // Pipeline (PRD 17): load -> parse -> normalize -> validate -> build graph -> plan -> emit -> format -> verify -> report.
 import { resolve, join, dirname } from 'node:path'
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -18,6 +18,7 @@ import { DOMAIN_MODULES } from './modules.js'
 import { intentSchema } from './schema.js'
 import { renderGraphHtml } from './visual_graph.js'
 import { generateDocsSite } from './docs_site.js'
+import { formatOpenApi, generateOpenApi, openApiFormat } from './openapi.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -315,6 +316,29 @@ async function main() {
     return
   }
 
+  if (cmd === 'openapi') {
+    const { ast } = await loadAst(projectDir, cfg)
+    const coreAst = normalize(ast)
+    const d = validate(coreAst, { projectDir, outDir: resolve(projectDir, cfg.out || 'app') })
+    if (d.hasErrors()) { console.log(d.format()); process.exit(1) }
+    const graph = buildGraph(coreAst)
+    const spec = generateOpenApi(graph)
+    const out = flag('out', null)
+    const format = openApiFormat({ out, yaml: args.includes('--yaml') })
+    const body = formatOpenApi(spec, format)
+    if (out) {
+      const outPath = resolve(out)
+      mkdirSync(dirname(outPath), { recursive: true })
+      writeFileSync(outPath, body)
+      console.log(`ok OpenAPI ${format} written -> ${outPath}`)
+    } else if (format === 'yaml') {
+      console.log(body)
+    } else {
+      console.log(body.trimEnd())
+    }
+    return
+  }
+
   if (cmd === 'stats') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -533,6 +557,7 @@ function help() {
     '  intentstack explain page.<id>.section.<id>                      show how a node compiles',
     '  intentstack doctor  [--project DIR]                             validate environment and plan',
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
+    '  intentstack openapi [--project DIR] [--out FILE] [--yaml]        print/export OpenAPI spec',
     '  intentstack stats   [--project DIR] [--json] [--out-stats FILE]  print app/compiler metrics',
     '  intentstack security [--project DIR] [--json] [--strict]          audit security posture',
     '  intentstack docs    [--project DIR] [--out DIR]                  generate static docs site',

@@ -17,6 +17,7 @@ Current commands:
 - `new`: create a starter intent project.
 - `doctor`: validate the project and compiler plan.
 - `graph`: print a Core IR summary for graph tooling.
+- `openapi`: export an OpenAPI 3.1 spec from intent entities and record actions.
 - `migrate`: currently no-op for DSL `0.1`.
 - `list_capabilities`: print targets, components, actions, field types and patch ops.
 

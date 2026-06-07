@@ -1,5 +1,5 @@
-// Build the Core IR / AppGraph from parsed intent (PRD §6.2).
-// This representation knows nothing about React, Hono, or Drizzle — only the domain.
+// Build the Core IR / AppGraph from parsed intent (PRD 6.2).
+// This representation knows nothing about React, Hono, or Drizzle - only the domain.
 
 import { normalize } from './normalize.js'
 

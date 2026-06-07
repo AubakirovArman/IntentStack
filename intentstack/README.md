@@ -19,6 +19,7 @@ node src/index.js split --project <dir> --write
 node src/index.js list_capabilities --json
 node src/index.js schema --out schema/intent.v0.1.schema.json
 node src/index.js graph --project <dir> --html graph.html
+node src/index.js openapi --project <dir> --out openapi.yaml
 node src/index.js stats --project <dir> --json
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
