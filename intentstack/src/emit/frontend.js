@@ -4,6 +4,7 @@ import { posix } from 'node:path'
 import { BANNER_TS, pascal, jsStr, t } from './util.js'
 import { radiusClass, density } from '../registry.js'
 import { hasPageAuth, isActivePolicy, reactAuthTs, roleLiteral } from './shared/modules.js'
+import { createSectionRenderer } from './shared/sections.js'
 
 export function emitFrontend(graph) {
   const files = {}
@@ -69,21 +70,22 @@ function sectionNameFor(sectionNames, page, sectionId) {
 }
 
 function renderSection(graph, name, s, page, RAD, DEN, sectionNames) {
-  switch (s.type) {
-    case 'navbar': return buildNavbar(name, s)
-    case 'hero': return buildHero(name, s, RAD, DEN)
-    case 'card_grid': return buildCardGrid(name, s, RAD, DEN)
-    case 'pricing_cards': return buildPricingCards(name, s, RAD, DEN)
-    case 'stats': return buildStats(name, s, RAD, DEN)
-    case 'content': return buildContent(name, s, RAD, DEN, page, sectionNames)
-    case 'custom_component': return buildCustomComponent(name, s, 'src/generated/components')
-    case 'form': return buildForm(name, graph, s, RAD, DEN)
-    case 'table': return buildTable(name, graph, s, page, RAD)
-    case 'record_detail': return buildRecordDetail(name, graph, s, page, RAD, DEN)
-    case 'footer': return buildFooter(name, s)
-    default: return null
-  }
+  return renderWebSection({ graph, name, section: s, page, RAD, DEN, sectionNames })
 }
+
+const renderWebSection = createSectionRenderer({
+  navbar: ({ name, section }) => buildNavbar(name, section),
+  hero: ({ name, section, RAD, DEN }) => buildHero(name, section, RAD, DEN),
+  card_grid: ({ name, section, RAD, DEN }) => buildCardGrid(name, section, RAD, DEN),
+  pricing_cards: ({ name, section, RAD, DEN }) => buildPricingCards(name, section, RAD, DEN),
+  stats: ({ name, section, RAD, DEN }) => buildStats(name, section, RAD, DEN),
+  content: ({ name, section, RAD, DEN, page, sectionNames }) => buildContent(name, section, RAD, DEN, page, sectionNames),
+  custom_component: ({ name, section }) => buildCustomComponent(name, section, 'src/generated/components'),
+  form: ({ name, graph, section, RAD, DEN }) => buildForm(name, graph, section, RAD, DEN),
+  table: ({ name, graph, section, page, RAD }) => buildTable(name, graph, section, page, RAD),
+  record_detail: ({ name, graph, section, page, RAD, DEN }) => buildRecordDetail(name, graph, section, page, RAD, DEN),
+  footer: ({ name, section }) => buildFooter(name, section),
+})
 
 function hasGlobalNavigation(graph) {
   return Boolean(graph.navigation && graph.navigation.enabled !== false)
