@@ -474,6 +474,14 @@ test('deploy prepares provider configuration without remote side effects', () =>
     assert.match(written.stdout, /ok deployment files written/)
     assert.match(readFileSync(join(out, 'render.yaml'), 'utf8'), /startCommand: npm run start/)
 
+    const execOut = join(dir, 'exec-app')
+    const markerCommand = `"${process.execPath}" -e "require('fs').writeFileSync('deploy-executed.txt','ok')"`
+    const executed = run(['deploy', '--project', 'demo', '--platform', 'vercel', '--out', execOut, '--no-build', '--execute', '--command', markerCommand])
+    assert.equal(executed.status, 0, executed.stderr)
+    assert.match(executed.stdout, /Executing deployment command/)
+    assert.match(executed.stdout, /deployment command exit code: 0/)
+    assert.equal(readFileSync(join(execOut, 'deploy-executed.txt'), 'utf8'), 'ok')
+
     const bad = run(['deploy', '--project', 'demo', '--platform', 'unknown', '--dry-run'])
     assert.equal(bad.status, 2)
     assert.match(bad.stderr, /Unknown deploy platform/)

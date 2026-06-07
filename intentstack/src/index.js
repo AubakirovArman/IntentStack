@@ -4,6 +4,7 @@
 import { resolve, join, dirname } from 'node:path'
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { spawnSync } from 'node:child_process'
 import { parseIntentFile } from './parse.js'
 import { findIntent, loadIntentProject, writeIntentProject } from './intent_loader.js'
 import { normalize } from './normalize.js'
@@ -517,7 +518,7 @@ async function main() {
 
   if (cmd === 'deploy') {
     const platform = flag('platform', (args[1] && !args[1].startsWith('--')) ? args[1] : null)
-    if (!platform) { console.error('Usage: intentstack deploy --platform vercel|netlify|render [--project DIR] [--out DIR] [--dry-run] [--no-build]'); process.exit(2) }
+    if (!platform) { console.error('Usage: intentstack deploy --platform vercel|netlify|render [--project DIR] [--out DIR] [--dry-run] [--no-build] [--execute] [--command CMD]'); process.exit(2) }
     let plan
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -527,10 +528,11 @@ async function main() {
     const graph = buildGraph(coreAst)
     try { plan = deploymentPlan(graph, platform) }
     catch (e) { console.error(e.message); process.exit(2) }
+    const deployCommand = flag('command', plan.command)
     console.log(`\nIntentStack deploy - ${intentPath}`)
     console.log(`Platform: ${plan.platform}`)
     console.log(`Output app: ${outDir}`)
-    console.log(`Command: ${plan.command}`)
+    console.log(`Command: ${deployCommand}`)
     for (const warning of plan.warnings) console.log(`Warning: ${warning}`)
     console.log('\nDeployment files:')
     for (const file of Object.keys(plan.files).sort()) console.log(`  + ${file}`)
@@ -555,7 +557,12 @@ async function main() {
       writeFileSync(outPath, content)
     }
     console.log(`ok deployment files written -> ${outDir}`)
-    console.log(`Next: cd ${outDir} && ${plan.command}`)
+    if (args.includes('--execute')) {
+      const result = executeDeploymentCommand(deployCommand, outDir)
+      if (result.status !== 0) process.exit(result.status || 1)
+    } else {
+      console.log(`Next: cd ${outDir} && ${deployCommand}`)
+    }
     return
   }
 
@@ -1089,6 +1096,26 @@ function securitySummary(graph, diagnostics) {
     status: findings.some((f) => f.severity === 'error') ? 'fail' : findings.length ? 'warn' : 'pass',
     findings,
   }
+}
+
+function executeDeploymentCommand(command, cwd) {
+  console.log(`\nExecuting deployment command in ${cwd}`)
+  console.log(`$ ${command}`)
+  const res = spawnSync(command, {
+    cwd,
+    shell: true,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
+  if (res.stdout) process.stdout.write(res.stdout)
+  if (res.stderr) process.stderr.write(res.stderr)
+  if (res.error) {
+    console.error(`deployment command failed to start: ${res.error.message}`)
+    return { status: 1 }
+  }
+  const status = res.status ?? 1
+  console.log(`deployment command exit code: ${status}`)
+  return { status }
 }
 
 function sampleIntent({ id, name, target }) {

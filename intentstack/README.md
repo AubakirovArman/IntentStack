@@ -25,6 +25,7 @@ node src/index.js editor --project <dir> --serve --port 4321
 node src/index.js openapi --project <dir> --out openapi.yaml
 node src/index.js testgen --project <dir> --out tests/generated   # API contract + Playwright E2E flows
 node src/index.js deploy --project <dir> --platform vercel --out app
+node src/index.js deploy --project <dir> --platform vercel --out app --execute
 node src/index.js themes --json
 node src/index.js themes enterprise --project <dir> --write
 node src/index.js marketplace --json

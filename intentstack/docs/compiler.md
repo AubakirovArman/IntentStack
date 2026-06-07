@@ -20,7 +20,7 @@ Current commands:
 - `editor`: export a visual graph and semantic patch builder HTML file.
 - `openapi`: export an OpenAPI 3.1 spec from intent entities and record actions.
 - `testgen`: generate API contract tests from intent record actions.
-- `deploy`: prepare provider deployment config for Vercel, Netlify, or Render.
+- `deploy`: prepare provider deployment config for Vercel, Netlify, or Render; add `--execute` to run the provider command after preparation.
 - `themes`: list local theme packs and apply them through intent writeback.
 - `marketplace`: list local targets, theme packs, and domain modules.
 - `collab`: inspect changed module owners and detect semantic owner conflicts against an incoming git ref.
