@@ -138,6 +138,9 @@ function envExample(graph, opts = {}) {
       if (envName) lines.push(`# ${envName}=$2b$12$...`)
     }
   }
+  if ((graph.workflows || []).length > 0) {
+    lines.push('', '# INTENTSTACK_WORKFLOW_MAX_ATTEMPTS=3')
+  }
   return lines.join('\n') + '\n'
 }
 
