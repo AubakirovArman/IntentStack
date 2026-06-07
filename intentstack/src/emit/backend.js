@@ -54,6 +54,10 @@ const metrics = {
 const app = new Hono()
 app.use('/api/*', cors({ origin: (origin) => origin || '*', credentials: true }))
 app.use('/api/*', async (c, next) => {
+  c.header('Content-Security-Policy', contentSecurityPolicy())
+  await next()
+})
+app.use('/api/*', async (c, next) => {
   const requestId = c.req.header('x-request-id') || randomUUID()
   const correlationId = c.req.header('x-correlation-id') || requestId
   const traceId = traceIdFromHeader(c.req.header('traceparent')) || newTraceId()
@@ -125,6 +129,19 @@ function newSpanId() {
 function traceIdFromHeader(value: string | undefined) {
   const match = /^00-([a-f0-9]{32})-[a-f0-9]{16}-[a-f0-9]{2}$/i.exec(value || '')
   return match?.[1]?.toLowerCase() || ''
+}
+
+function contentSecurityPolicy() {
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "connect-src 'self' http://localhost:* ws://localhost:*",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+  ].join('; ')
 }
 
 function shutdown(signal: NodeJS.Signals) {

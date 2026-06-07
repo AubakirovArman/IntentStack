@@ -90,7 +90,7 @@ Implemented: `new`, `check`, `build`, `plan`, `diff`, `apply`, `explain`, `docto
 `migrate`, `list_capabilities`, `schema`, `graph`, `collab`, `suggest`, `voice`, `editor`, `openapi`, `testgen`, `deploy`, `themes`, `marketplace`, `stats`, `verify`; two target adapters;
 entities -> Drizzle schema + schema-checksummed SQL migration manifest + additive evolution migrations + explicit migration runner + zod validators; record actions -> Hono routes /
 Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, `hero`, `card_grid`, `stats`,
-`pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; derived API clients; inline
+`pricing_cards`, `content`, `form`, `table`, `record_detail`, `footer`, `custom_component`; custom component source safety checks and generated CSP; derived API clients; inline
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; durable workflow run log/retry; workflow/integration metadata and provider-specific integration clients;

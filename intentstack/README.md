@@ -59,6 +59,7 @@ changes instead of rewriting `0000_init.sql`.
 - `content` sections generate structured docs/content blocks: headings, paragraphs, lists, code, links, callouts, tables, and embedded examples.
 - `example` content blocks render a generated section preview and its patch code together; set the referenced section to `embed_only: true` to avoid standalone page rendering.
 - `content.example.add` adds embedded docs examples as a semantic patch op.
+- `custom_component` sources must stay under `src/custom/`, export the named component, avoid unsafe code patterns, and generated apps include CSP headers/meta.
 - Modular intent is the default project structure. Keep `intent/app.intent.yaml` thin with `includes`; put behavior under `shared/`, `backend/`, and `frontend/`.
 - `apply --write` preserves modular structure by writing changes back to owner files.
 - `section.module.add` creates new section modules and inserts page refs in one patch op.

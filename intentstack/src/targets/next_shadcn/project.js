@@ -93,6 +93,7 @@ export function middleware(req: NextRequest) {
   const traceId = traceIdFromHeader(req.headers.get('traceparent')) || newTraceId()
   const spanId = newSpanId()
   const res = NextResponse.next()
+  res.headers.set('Content-Security-Policy', contentSecurityPolicy())
   res.headers.set('X-Request-Id', requestId)
   res.headers.set('X-Correlation-Id', correlationId)
   res.headers.set('X-Trace-Id', traceId)
@@ -123,8 +124,21 @@ function traceIdFromHeader(value: string | null) {
   return match?.[1]?.toLowerCase() || ''
 }
 
+function contentSecurityPolicy() {
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "connect-src 'self' http://localhost:* ws://localhost:*",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+  ].join('; ')
+}
+
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/:path*'],
 }
 `
 }

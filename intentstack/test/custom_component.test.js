@@ -73,6 +73,8 @@ test('custom_component rejects unsafe code patterns when source is available', (
     writeFileSync(join(dir, 'src/custom/components/RoiCalculator.tsx'), `import { readFileSync } from 'node:fs'
 export function RoiCalculator() {
   eval('1 + 1')
+  fetch('/api/secrets')
+  window.localStorage.setItem('token', 'x')
   return <div dangerouslySetInnerHTML={{ __html: 'unsafe' }} />
 }
 `)
@@ -80,6 +82,8 @@ export function RoiCalculator() {
     assert.ok(d.errors.some((e) => e.code === 'E2313'))
     assert.ok(d.errors.some((e) => e.code === 'E2314'))
     assert.ok(d.errors.some((e) => e.code === 'E2315'))
+    assert.ok(d.errors.some((e) => e.code === 'E2316'))
+    assert.ok(d.errors.some((e) => e.code === 'E2317'))
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

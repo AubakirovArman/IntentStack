@@ -556,6 +556,8 @@ function validateCustomSourceCode(d, sp, s, code) {
     { code: 'E2313', re: /\bimport\s*\(/, message: 'must not use dynamic import().' },
     { code: 'E2314', re: /\bdangerouslySetInnerHTML\b/, message: 'must not use dangerouslySetInnerHTML.' },
     { code: 'E2315', re: /from\s+['"](?:node:)?(?:fs|child_process|path|os|crypto|http|https|net|process)['"]/, message: 'must not import Node built-ins.' },
+    { code: 'E2316', re: /\b(fetch|XMLHttpRequest|WebSocket)\b/, message: 'must not open network connections; use generated actions/integrations instead.' },
+    { code: 'E2317', re: /\b(localStorage|sessionStorage)\b|document\.cookie|\bnavigator\.sendBeacon\b/, message: 'must not access browser storage, cookies, or sendBeacon.' },
   ]
   for (const rule of forbidden) {
     if (rule.re.test(code)) {

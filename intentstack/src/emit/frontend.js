@@ -858,11 +858,22 @@ function themeCss() {
 }
 
 function indexHtml(graph) {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "connect-src 'self' http://localhost:* ws://localhost:*",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+  ].join('; ')
   return `<!doctype html>
 <html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <title>${graph.project?.name || 'IntentStack App'}</title>
   </head>
   <body>
