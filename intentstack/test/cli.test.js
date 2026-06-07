@@ -42,6 +42,7 @@ test('schema command exposes the DSL JSON Schema', () => {
   assert.equal(schema.title, 'IntentStack Intent DSL v0.1')
   assert.ok(schema.properties.navigation)
   assert.ok(schema.properties.tenancy)
+  assert.ok(schema.properties.project.properties.database.properties.driver.enum.includes('sqlite'))
   assert.ok(schema.properties.actions.items.properties.type.enum.includes('update_record'))
   assert.ok(schema.properties.actions.items.properties.type.enum.includes('subscribe_records'))
   assert.ok(schema.properties.pages.items.properties.sections.items.properties.type.enum.includes('content'))

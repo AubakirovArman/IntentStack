@@ -44,6 +44,10 @@ core directly. Full Rust emitter parity is intentionally still future work.
 - `web_ts_minimal`: Vite + React + Tailwind/daisyUI, Hono API, Drizzle + SQLite.
 - `next_shadcn`: Next.js App Router + shadcn-style primitives, route handlers, Drizzle + SQLite.
 
+Both targets consume the same `db_driver` contract. The shipped driver is `sqlite`; it owns
+Drizzle imports, SQL migration text, migration manifest checksums, generated DB client code,
+package dependencies, env examples, gitignore entries, and generated app README database notes.
+
 ## Current UI Contract
 
 - Top-level `navigation` generates one shared nav component reused across pages.

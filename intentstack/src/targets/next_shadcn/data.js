@@ -8,7 +8,7 @@ import { BANNER } from './constants.js'
 export function dataLayer(graph) {
   const files = {}
   const driver = dbDriver(graph)
-  files['lib/db/schema.ts'] = BANNER + schemaImports() + schemaBody(graph)
+  files['lib/db/schema.ts'] = BANNER + schemaImports(graph) + schemaBody(graph)
   files['lib/db/client.ts'] = driver.clientTs({
     banner: BANNER,
     functionName: 'ensureMigrated',
@@ -28,7 +28,7 @@ runIntentStackMigrations()
   })
 `
   files[driver.migrationFile] = migrationSql(graph)
-  files[driver.manifestFile] = migrationManifest(graph, driver.id)
+  files[driver.manifestFile] = migrationManifest(graph)
   for (const e of graph.entities) {
     files[`lib/validators/${e.id.toLowerCase()}.ts`] = BANNER + validatorBody(e)
   }

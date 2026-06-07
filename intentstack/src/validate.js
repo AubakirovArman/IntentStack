@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import { Diagnostics, closest } from './diagnostics.js'
 import { TARGETS, FIELD_TYPES, ACTION_TYPES, ENTITY_ACTIONS } from './registry.js'
+import { DATABASE_DRIVER_IDS } from './emit/shared/db_driver.js'
 import { policyRoles } from './emit/shared/modules.js'
 
 const ROOT_KEYS = new Set([
@@ -57,6 +58,7 @@ export function validate(ast, opts = {}) {
       suggestion: `Available targets: ${Object.keys(TARGETS).join(', ')}`,
     })
   }
+  validateDatabase(d, project?.database)
 
   validateNavigation(d, ast.navigation)
   validateTenancy(d, ast.tenancy)
@@ -385,6 +387,20 @@ function validateTenancy(d, tenancy) {
   }
   if (tenancy.storage_key != null && (typeof tenancy.storage_key !== 'string' || tenancy.storage_key.length === 0)) {
     d.error('E2303', 'tenancy.storage_key must be a non-empty string.', { path: 'tenancy.storage_key' })
+  }
+}
+
+function validateDatabase(d, database) {
+  if (database == null) return
+  if (typeof database !== 'object' || Array.isArray(database)) {
+    d.error('E2400', 'project.database must be an object.', { path: 'project.database' })
+    return
+  }
+  if (database.driver != null && !DATABASE_DRIVER_IDS.includes(database.driver)) {
+    d.error('E2401', `Unsupported database driver "${database.driver}".`, {
+      path: 'project.database.driver',
+      suggestion: `Supported database drivers: ${DATABASE_DRIVER_IDS.join(', ')}`,
+    })
   }
 }
 

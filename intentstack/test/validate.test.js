@@ -199,6 +199,23 @@ test('validates multi-tenant configuration', () => {
   assert.ok(malformed.errors.some((e) => e.code === 'E2303'))
 })
 
+test('validates project database driver configuration', () => {
+  const valid = validate({
+    version: '0.1',
+    project: { id: 'db_app', target: 'web_ts_minimal', database: { driver: 'sqlite' } },
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(valid.hasErrors(), false, valid.format())
+
+  const invalid = validate({
+    version: '0.1',
+    project: { id: 'bad_db_app', target: 'web_ts_minimal', database: { driver: 'oracle' } },
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(invalid.hasErrors(), true)
+  assert.ok(invalid.errors.some((e) => e.code === 'E2401'))
+})
+
 test('tenantId field is reserved when tenancy is enabled', () => {
   const d = validate({
     version: '0.1',

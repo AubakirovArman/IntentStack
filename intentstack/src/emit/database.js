@@ -7,7 +7,7 @@ import { dbDriver } from './shared/db_driver.js'
 export function emitDatabase(graph) {
   const files = {}
   const driver = dbDriver(graph)
-  files['server/generated/db/schema.ts'] = BANNER_TS + schemaImports() + schemaBody(graph)
+  files['server/generated/db/schema.ts'] = BANNER_TS + schemaImports(graph) + schemaBody(graph)
   files['server/generated/db/client.ts'] = driver.clientTs({
     banner: BANNER_TS,
     functionName: 'migrate',
@@ -28,7 +28,7 @@ runIntentStackMigrations()
   })
 `
   files[driver.migrationFile] = migrationSql(graph)
-  files[driver.manifestFile] = migrationManifest(graph, driver.id)
+  files[driver.manifestFile] = migrationManifest(graph)
   for (const e of graph.entities) {
     files[`server/generated/validators/${e.id.toLowerCase()}.ts`] = BANNER_TS + validatorBody(e)
   }

@@ -1,4 +1,5 @@
 import { ACTION_TYPES, COMPONENT_TYPES, FIELD_TYPES, TARGETS } from './registry.js'
+import { DATABASE_DRIVER_IDS } from './emit/shared/db_driver.js'
 
 export function intentSchema() {
   return {
@@ -18,6 +19,13 @@ export function intentSchema() {
           id: { type: 'string', minLength: 1 },
           name: { type: 'string' },
           target: { enum: Object.keys(TARGETS) },
+          database: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              driver: { enum: DATABASE_DRIVER_IDS },
+            },
+          },
         },
       },
       theme: {
