@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, resolve, sep } from 'node:path'
 import { parseIntentFile } from './parse.js'
 
@@ -70,6 +70,144 @@ export async function assembleIntent(root, rootPath) {
     pathFiles,
   })
   return ast
+}
+
+export async function writeIntentProject(ast, intentPath, opts = {}) {
+  if (!ast?.__intentstack?.modular || opts.singleFile) {
+    await writeIntentFile(intentPath, stripMetadata(ast))
+    return [intentPath]
+  }
+
+  const metadata = ast.__intentstack
+  const rootPath = metadata.rootPath || intentPath
+  const rootDoc = await parseIntentFile(rootPath)
+  const written = new Set()
+  const rootNext = clone(rootDoc || {})
+  rootNext.version = ast.version
+  rootNext.includes = metadata.includes || rootNext.includes || []
+
+  for (const key of ['project', 'theme', 'navigation', 'auth']) {
+    const owner = metadata.owners?.[key]
+    if (!owner || samePath(owner, rootPath)) {
+      if (ast[key] != null) rootNext[key] = clone(ast[key])
+    } else if (ast[key] != null) {
+      await writeIntentFile(owner, { [key]: stripMetadata(ast[key]) })
+      written.add(owner)
+    }
+  }
+
+  for (const key of ['entities', 'actions', 'workflows', 'integrations']) {
+    await writeCollectionModules(ast, metadata, key, rootPath, written)
+  }
+  await writePageModules(ast, metadata, rootPath, written)
+  await writeSectionModules(ast, metadata, written)
+
+  await writeIntentFile(rootPath, rootNext)
+  written.add(rootPath)
+  return [...written]
+}
+
+async function writeCollectionModules(ast, metadata, collection, rootPath, written) {
+  const owners = metadata.owners?.[collection] || {}
+  const groups = new Map()
+  for (const item of ast[collection] || []) {
+    if (!item?.id) continue
+    const owner = owners[item.id]?.file || defaultModulePath(rootPath, collection, item.id)
+    if (samePath(owner, rootPath)) continue
+    if (!groups.has(owner)) groups.set(owner, [])
+    groups.get(owner).push(item)
+  }
+  for (const [file, items] of groups.entries()) {
+    const doc = items.length === 1
+      ? { [singular(collection)]: stripMetadata(items[0]) }
+      : { [collection]: items.map(stripMetadata) }
+    await writeIntentFile(file, doc)
+    written.add(file)
+  }
+}
+
+async function writePageModules(ast, metadata, rootPath, written) {
+  const owners = metadata.owners?.pages || {}
+  const groups = new Map()
+  for (const page of ast.pages || []) {
+    if (!page?.id) continue
+    const owner = owners[page.id]?.file || defaultModulePath(rootPath, 'pages', page.id)
+    if (samePath(owner, rootPath)) continue
+    if (!groups.has(owner)) groups.set(owner, [])
+    groups.get(owner).push(pageForWrite(page, metadata, owner))
+  }
+  for (const [file, pages] of groups.entries()) {
+    const doc = pages.length === 1 ? { page: pages[0] } : { pages }
+    await writeIntentFile(file, doc)
+    written.add(file)
+  }
+}
+
+async function writeSectionModules(ast, metadata, written) {
+  const groups = new Map()
+  const owners = metadata.owners?.sections || {}
+  for (const page of ast.pages || []) {
+    for (const section of page.sections || []) {
+      const owner = section?.id ? owners[section.id] : null
+      if (!owner?.file) continue
+      if (!groups.has(owner.file)) groups.set(owner.file, [])
+      groups.get(owner.file).push({ section, owner })
+    }
+  }
+  for (const [file, entries] of groups.entries()) {
+    const doc = entries.length === 1
+      ? sectionDoc(entries[0].section, entries[0].owner)
+      : { sections: entries.map((entry) => stripMetadata(entry.section)) }
+    await writeIntentFile(file, doc)
+    written.add(file)
+  }
+}
+
+function pageForWrite(page, metadata, pageOwner) {
+  const next = stripMetadata(page)
+  next.sections = (page.sections || []).map((section) => {
+    const owner = section?.id ? metadata.owners?.sections?.[section.id] : null
+    return owner?.file && !samePath(owner.file, pageOwner)
+      ? { ref: section.id }
+      : stripMetadata(section)
+  })
+  return next
+}
+
+function sectionDoc(section, owner) {
+  const doc = { section: stripMetadata(section) }
+  if (owner?.page) doc.page = owner.page
+  return doc
+}
+
+async function writeIntentFile(file, doc) {
+  const mod = await import('js-yaml')
+  const YAML = mod.default ?? mod
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, YAML.dump(doc, { lineWidth: 100, noRefs: true }))
+}
+
+function stripMetadata(value) {
+  return clone(value)
+}
+
+function defaultModulePath(rootPath, collection, id) {
+  const rootDir = dirname(rootPath)
+  const name = kebab(id)
+  if (collection === 'entities') return resolve(rootDir, `backend/entities/${name}.entity.yaml`)
+  if (collection === 'actions') return resolve(rootDir, `backend/actions/${name}.action.yaml`)
+  if (collection === 'workflows') return resolve(rootDir, `backend/workflows/${name}.workflow.yaml`)
+  if (collection === 'integrations') return resolve(rootDir, `backend/integrations/${name}.integration.yaml`)
+  if (collection === 'pages') return resolve(rootDir, `frontend/pages/${name}.page.yaml`)
+  return resolve(rootDir, `${collection}/${name}.yaml`)
+}
+
+function kebab(value) {
+  return String(value).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'module'
+}
+
+function samePath(a, b) {
+  return normalizePath(resolve(a)).toLowerCase() === normalizePath(resolve(b)).toLowerCase()
 }
 
 function emptyAst(root) {

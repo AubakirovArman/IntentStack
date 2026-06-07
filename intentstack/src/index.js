@@ -6,7 +6,7 @@ import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readd
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { parseIntentFile } from './parse.js'
-import { findIntent, loadIntentProject } from './intent_loader.js'
+import { findIntent, loadIntentProject, writeIntentProject } from './intent_loader.js'
 import { validate } from './validate.js'
 import { buildGraph } from './graph.js'
 import { emit, getAdapter, planFiles } from './emit/index.js'
@@ -185,11 +185,13 @@ async function main() {
     console.log(d.format())
     if (d.hasErrors()) { console.error(`\nx patch would introduce ${d.errors.length} error(s) - NOT written.`); process.exit(1) }
     if (args.includes('--write')) {
-      const mod = await import('js-yaml'); const YAML = mod.default ?? mod
       const outIntent = flag('out-intent', intentPath)
-      writeFileSync(outIntent, YAML.dump(ast, { lineWidth: 100, noRefs: true }))
+      const written = await writeIntentProject(ast, outIntent, { singleFile: outIntent !== intentPath })
       appendPatchHistory(outIntent, patchArg, changes)
       console.log(`\nok patched intent written -> ${outIntent}`)
+      if (ast.__intentstack?.modular && outIntent === intentPath) {
+        console.log(`   modules updated: ${written.length}`)
+      }
     } else {
       console.log('\n(dry run - add --write to persist, or --out-intent FILE to write a copy)')
     }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
@@ -153,6 +153,75 @@ test('apply --write records patch history used by graph HTML', () => {
     assert.equal(graphed.status, 0, graphed.stderr)
     assert.match(readFileSync(out, 'utf8'), /Patch History/)
     assert.match(readFileSync(out, 'utf8'), /project\.set_name/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('apply --write preserves modular intent files and writes owners', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-modular-apply-'))
+  try {
+    mkdirSync(join(dir, 'intent/shared'), { recursive: true })
+    mkdirSync(join(dir, 'intent/frontend/pages'), { recursive: true })
+    mkdirSync(join(dir, 'intent/frontend/sections/docs'), { recursive: true })
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: modular_apply
+  target: web_ts_minimal
+includes:
+  - shared/*.yaml
+  - frontend/pages/*.yaml
+  - frontend/sections/**/*.yaml
+`)
+    writeFileSync(join(dir, 'intent/shared/navigation.yaml'), `navigation:
+  logo: Modular Apply
+  items:
+    - label: Home
+      href: /
+`)
+    writeFileSync(join(dir, 'intent/frontend/pages/docs.yaml'), `page:
+  id: docs
+  path: /docs
+  layout: docs
+  sections:
+    - ref: docs_content
+`)
+    writeFileSync(join(dir, 'intent/frontend/sections/docs/content.yaml'), `section:
+  id: docs_content
+  type: content
+  title: Docs
+  blocks:
+    - id: intro
+      type: paragraph
+      text: Before
+`)
+    const patch = join(dir, 'update.patch.yaml')
+    writeFileSync(patch, `patch:
+  - op: navigation.item.add
+    item:
+      label: Docs
+      href: /docs
+  - op: content.block.update
+    section: docs_content
+    block: intro
+    value:
+      text: After
+`)
+
+    const applied = run(['apply', patch, '--project', dir, '--write'])
+    assert.equal(applied.status, 0, applied.stderr)
+    assert.match(applied.stdout, /modules updated:/)
+
+    const rootIntent = readFileSync(join(dir, 'intent/app.intent.yaml'), 'utf8')
+    const navigation = readFileSync(join(dir, 'intent/shared/navigation.yaml'), 'utf8')
+    const section = readFileSync(join(dir, 'intent/frontend/sections/docs/content.yaml'), 'utf8')
+    assert.match(rootIntent, /includes:/)
+    assert.doesNotMatch(rootIntent, /^pages:/m)
+    assert.match(navigation, /label: Docs/)
+    assert.match(section, /text: After/)
+
+    const checked = run(['check', '--project', dir])
+    assert.equal(checked.status, 0, checked.stderr)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
