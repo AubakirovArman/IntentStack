@@ -6,10 +6,13 @@ export function collaborationReport(graph, projectDir, opts = {}) {
   const owners = ownerEntries(graph)
   const git = gitChanges(projectDir, opts.base || 'HEAD')
   const changedFiles = git.changedFiles.map((file) => resolve(git.root || projectDir, file))
+  const incoming = opts.incoming ? gitChangesBetween(projectDir, opts.base || 'HEAD', opts.incoming) : null
+  const incomingFiles = incoming?.changedFiles?.map((file) => resolve(incoming.root || projectDir, file)) || []
   const sourceFiles = new Set((modules.sourceFiles || []).map((file) => normalizeAbs(file)))
   const ownerByFile = groupOwnersByFile(owners)
 
   const changedOwners = []
+  const incomingOwners = []
   const unknownIntentFiles = []
   for (const file of changedFiles) {
     const key = normalizeAbs(file)
@@ -20,6 +23,15 @@ export function collaborationReport(graph, projectDir, opts = {}) {
       unknownIntentFiles.push(rel)
     }
   }
+  for (const file of incomingFiles) {
+    const key = normalizeAbs(file)
+    const rel = relProject(projectDir, file)
+    const matches = ownerByFile.get(key) || []
+    for (const owner of matches) incomingOwners.push({ ...owner, changed_file: rel })
+  }
+  const localOwners = dedupeOwners(changedOwners)
+  const remoteOwners = dedupeOwners(incomingOwners)
+  const conflicts = ownerConflicts(localOwners, remoteOwners)
 
   const findings = []
   if (!git.available) {
@@ -27,6 +39,13 @@ export function collaborationReport(graph, projectDir, opts = {}) {
       code: 'COLLAB_GIT_UNAVAILABLE',
       severity: 'warn',
       message: git.error || 'Git metadata is unavailable for this project.',
+    })
+  }
+  if (incoming && !incoming.available) {
+    findings.push({
+      code: 'COLLAB_INCOMING_UNAVAILABLE',
+      severity: 'warn',
+      message: incoming.error || `Git metadata is unavailable for incoming ref ${opts.incoming}.`,
     })
   }
   if (modules.modular && changedFiles.some((file) => samePath(file, modules.rootPath))) {
@@ -57,6 +76,17 @@ export function collaborationReport(graph, projectDir, opts = {}) {
       file,
     })
   }
+  for (const conflict of conflicts) {
+    findings.push({
+      code: 'COLLAB_OWNER_CONFLICT',
+      severity: 'error',
+      message: `Local changes and ${opts.incoming} both modify ${conflict.owner}.`,
+      owner: conflict.owner,
+      local_file: conflict.local_file,
+      incoming_file: conflict.incoming_file,
+      suggestion: 'Rebase or merge the incoming branch, then resolve by editing the owner module and re-running intentstack check/build.',
+    })
+  }
 
   return {
     project: graph.project,
@@ -71,7 +101,14 @@ export function collaborationReport(graph, projectDir, opts = {}) {
       root: git.root,
       changed_files: changedFiles.map((file) => relProject(projectDir, file)),
     },
-    owners_changed: dedupeOwners(changedOwners),
+    incoming: incoming ? {
+      available: incoming.available,
+      ref: opts.incoming,
+      changed_files: incomingFiles.map((file) => relProject(projectDir, file)),
+      owners_changed: remoteOwners,
+    } : null,
+    owners_changed: localOwners,
+    conflicts,
     findings,
     status: findings.some((item) => item.severity === 'error') ? 'error' : findings.length ? 'warn' : 'ok',
   }
@@ -87,6 +124,16 @@ export function formatCollabReport(report) {
   if (report.owners_changed.length) {
     lines.push('', 'Changed owners:')
     for (const owner of report.owners_changed) lines.push(`  - ${owner.kind}:${owner.id} (${owner.changed_file})`)
+  }
+  if (report.incoming) {
+    lines.push('', `Incoming ${report.incoming.ref}: ${report.incoming.changed_files.length} changed file(s)`)
+    for (const owner of report.incoming.owners_changed || []) lines.push(`  - ${owner.kind}:${owner.id} (${owner.changed_file})`)
+  }
+  if (report.conflicts?.length) {
+    lines.push('', 'Semantic conflicts:')
+    for (const conflict of report.conflicts) {
+      lines.push(`  - ${conflict.owner}: local ${conflict.local_file}; incoming ${conflict.incoming_file}`)
+    }
   }
   if (report.findings.length) {
     lines.push('', 'Findings:')
@@ -127,6 +174,16 @@ function gitChanges(projectDir, base) {
   return { available: true, root: repoRoot, changedFiles: [...new Set(files)], error: null }
 }
 
+function gitChangesBetween(projectDir, base, incoming) {
+  const root = git(['-C', projectDir, 'rev-parse', '--show-toplevel'])
+  if (root.status !== 0) return { available: false, root: null, changedFiles: [], error: root.error }
+  const repoRoot = root.stdout.trim()
+  const projectRel = gitPath(relative(repoRoot, projectDir)) || '.'
+  const diff = git(['-C', repoRoot, 'diff', '--name-only', base, incoming, '--', projectRel])
+  if (diff.status !== 0) return { available: false, root: repoRoot, changedFiles: [], error: diff.error }
+  return { available: true, root: repoRoot, changedFiles: [...new Set(lines(diff.stdout))], error: null }
+}
+
 function git(args) {
   const res = spawnSync('git', args, { encoding: 'utf8', stdio: 'pipe' })
   return {
@@ -156,6 +213,29 @@ function dedupeOwners(owners) {
     out.push(owner)
   }
   return out
+}
+
+function ownerConflicts(localOwners, incomingOwners) {
+  const incomingByOwner = new Map()
+  for (const owner of incomingOwners) incomingByOwner.set(ownerKey(owner), owner)
+  const conflicts = []
+  const seen = new Set()
+  for (const local of localOwners) {
+    const key = ownerKey(local)
+    const incoming = incomingByOwner.get(key)
+    if (!incoming || seen.has(key)) continue
+    seen.add(key)
+    conflicts.push({
+      owner: key,
+      local_file: local.changed_file,
+      incoming_file: incoming.changed_file,
+    })
+  }
+  return conflicts
+}
+
+function ownerKey(owner) {
+  return `${owner.kind}:${owner.id}`
 }
 
 function lines(value) {

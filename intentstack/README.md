@@ -19,6 +19,7 @@ node src/index.js split --project <dir> --write
 node src/index.js list_capabilities --json
 node src/index.js schema --out schema/intent.v0.1.schema.json
 node src/index.js graph --project <dir> --html graph.html
+node src/index.js collab --project <dir> --incoming feature-branch --json
 node src/index.js editor --project <dir> --out editor.html
 node src/index.js editor --project <dir> --serve --port 4321
 node src/index.js openapi --project <dir> --out openapi.yaml

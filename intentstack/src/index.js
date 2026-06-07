@@ -408,7 +408,7 @@ async function main() {
   if (cmd === 'collab') {
     const { ast } = await loadAst(projectDir, cfg)
     const graph = buildGraph(normalize(ast))
-    const data = collaborationReport(graph, projectDir, { base: flag('base', 'HEAD') })
+    const data = collaborationReport(graph, projectDir, { base: flag('base', 'HEAD'), incoming: flag('incoming', null) })
     if (args.includes('--json')) console.log(JSON.stringify(data, null, 2))
     else console.log('\n' + formatCollabReport(data))
     if (args.includes('--strict') && data.findings.length > 0) process.exit(1)
@@ -777,7 +777,8 @@ function help() {
     '  intentstack explain page.<id>.section.<id>                      show how a node compiles',
     '  intentstack doctor  [--project DIR]                             validate environment and plan',
     '  intentstack graph   [--project DIR] [--json|--html FILE]        print/export Core IR graph',
-    '  intentstack collab  [--project DIR] [--base REF] [--json]       inspect git/module owner changes',
+    '  intentstack collab  [--project DIR] [--base REF] [--incoming REF] [--json]',
+    '                                                                  inspect git/module owner changes',
     '  intentstack suggest [--project DIR] [--json] [--limit N]         suggest semantic patch templates',
     '  intentstack voice   "add pricing section" [--json]              convert voice/text intent to patch',
     '  intentstack editor  [--project DIR] [--out FILE|--serve]         export or serve visual patch editor',

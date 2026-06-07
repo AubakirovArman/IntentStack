@@ -591,6 +591,46 @@ test('collab maps git changes to modular intent owners', () => {
   }
 })
 
+test('collab detects semantic owner conflicts against an incoming ref', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-collab-conflict-'))
+  try {
+    const created = run(['new', dir, '--name', 'Conflict App'])
+    assert.equal(created.status, 0, created.stderr)
+    assert.equal(spawnSync('git', ['init'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['config', 'user.email', 'agent@example.com'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['config', 'user.name', 'IntentStack Agent'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['add', '.'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['commit', '-m', 'init'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    const currentBranch = spawnSync('git', ['branch', '--show-current'], { cwd: dir, encoding: 'utf8' }).stdout.trim() || 'master'
+    const navigation = join(dir, 'intent/shared/navigation.yaml')
+
+    assert.equal(spawnSync('git', ['checkout', '-b', 'incoming-nav'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    writeFileSync(navigation, readFileSync(navigation, 'utf8').replace('Home', 'Docs'))
+    assert.equal(spawnSync('git', ['add', '.'], { cwd: dir, encoding: 'utf8' }).status, 0)
+    assert.equal(spawnSync('git', ['commit', '-m', 'incoming nav'], { cwd: dir, encoding: 'utf8' }).status, 0)
+
+    assert.equal(spawnSync('git', ['checkout', currentBranch], { cwd: dir, encoding: 'utf8' }).status, 0)
+    writeFileSync(navigation, readFileSync(navigation, 'utf8').replace('Home', 'Start'))
+
+    const res = run(['collab', '--project', dir, '--incoming', 'incoming-nav', '--json'])
+    assert.equal(res.status, 0, res.stderr)
+    const data = JSON.parse(res.stdout)
+    assert.equal(data.status, 'error')
+    assert.equal(data.incoming.ref, 'incoming-nav')
+    assert.ok(data.conflicts.some((conflict) => conflict.owner === 'navigation:navigation'))
+    assert.ok(data.findings.some((finding) => finding.code === 'COLLAB_OWNER_CONFLICT'))
+
+    const text = run(['collab', '--project', dir, '--incoming', 'incoming-nav'])
+    assert.equal(text.status, 0, text.stderr)
+    assert.match(text.stdout, /Semantic conflicts:/)
+
+    const strict = run(['collab', '--project', dir, '--incoming', 'incoming-nav', '--strict'])
+    assert.equal(strict.status, 1)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('editor command exports the visual patch editor', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-editor-'))
   try {

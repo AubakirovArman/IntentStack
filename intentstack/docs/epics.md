@@ -44,6 +44,7 @@ Status legend:
 28. Split command: `done`. `intentstack split` dry-runs or writes modular files from a monolith intent.
 29. Content authoring improvements: `done`. Content blocks now support links, callouts, and tables; patch ops include `content.blocks.set` and `content.block.move`.
 30. Module graph UI: `done`. `graph --json` and `graph --html` expose module source files and ownership.
+30a. Collaboration conflict detection: `done`. `collab --incoming <ref>` compares local changed owners with an incoming git ref and reports semantic owner conflicts before agents merge edits.
 31. Modular-first default: `done`. `intentstack new` creates modular projects by default, `--single-file` is reserved for legacy monoliths, and `playground/visual-starter` now uses root includes plus shared/frontend modules.
 32. Section module patch op: `done`. `section.module.add` creates a focused section module and inserts a page `ref`, keeping modular pages from accumulating inline sections.
 33. Embedded docs examples: `done`. `example` content blocks can render a live generated section and patch code inside the same docs article block; `embed_only` keeps referenced sections out of standalone page rendering; `content.example.add` inserts these blocks through semantic patches.
