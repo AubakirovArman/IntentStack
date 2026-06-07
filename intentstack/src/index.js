@@ -187,6 +187,39 @@ async function main() {
     return
   }
 
+  if (cmd === 'marketplace') {
+    const data = {
+      targets: Object.values(TARGETS).map((target) => ({
+        id: target.id,
+        framework: target.framework,
+        ui: target.ui,
+        components: target.supported_components.length,
+        actions: target.supported_actions.length,
+      })),
+      themes: listThemePacks(),
+      domain_modules: Object.entries(DOMAIN_MODULES).map(([id, module]) => ({ id, ...module })),
+    }
+    const kind = flag('kind', null)
+    const filtered = kind ? { [kind]: data[kind] || [] } : data
+    if (args.includes('--json')) console.log(JSON.stringify(filtered, null, 2))
+    else {
+      console.log('IntentStack Marketplace')
+      if (!kind || kind === 'targets') {
+        console.log('\nTargets:')
+        for (const target of data.targets) console.log(`  ${target.id}: ${target.framework}/${target.ui}`)
+      }
+      if (!kind || kind === 'themes') {
+        console.log('\nThemes:')
+        for (const theme of data.themes) console.log(`  ${theme.id}: ${theme.label}`)
+      }
+      if (!kind || kind === 'domain_modules') {
+        console.log('\nDomain modules:')
+        for (const module of data.domain_modules) console.log(`  ${module.id}: ${module.status}`)
+      }
+    }
+    return
+  }
+
   if (cmd === 'split') {
     const { intentPath, ast } = await loadAst(projectDir, cfg)
     const coreAst = normalize(ast)
@@ -681,6 +714,7 @@ function help() {
     '  intentstack testgen [--project DIR] [--out DIR]                  generate API contract tests',
     '  intentstack deploy  --platform P [--project DIR] [--out DIR]     prepare deploy config',
     '  intentstack themes  [--json|--apply PRESET --write]              list/apply theme packs',
+    '  intentstack marketplace [--json] [--kind K]                      list local extensions',
     '  intentstack stats   [--project DIR] [--json] [--out-stats FILE]  print app/compiler metrics',
     '  intentstack security [--project DIR] [--json] [--strict]          audit security posture',
     '  intentstack docs    [--project DIR] [--out DIR]                  generate static docs site',

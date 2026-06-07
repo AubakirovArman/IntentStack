@@ -25,6 +25,7 @@ node src/index.js testgen --project <dir> --out tests/generated
 node src/index.js deploy --project <dir> --platform vercel --out app
 node src/index.js themes --json
 node src/index.js themes enterprise --project <dir> --write
+node src/index.js marketplace --json
 node src/index.js stats --project <dir> --json
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn
 node src/index.js verify --examples examples --targets web_ts_minimal,next_shadcn --npm-build
@@ -54,6 +55,7 @@ compiler. It is intentionally not a full Rust port yet.
 - `editor` exports the same visual graph plus Patch Builder as an explicit visual editing entrypoint.
 - Generated apps expose `/api/health` and `/api/metrics` for basic runtime checks.
 - `themes` lists local theme packs and can apply one back into modular intent.
+- `marketplace` lists local targets, theme packs, and domain modules available in this compiler build.
 
 ## Modular Example
 

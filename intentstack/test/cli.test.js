@@ -76,6 +76,21 @@ test('themes lists and applies theme packs through modular writeback', () => {
   }
 })
 
+test('marketplace lists local targets, themes and domain modules', () => {
+  const res = run(['marketplace', '--json'])
+  assert.equal(res.status, 0, res.stderr)
+  const data = JSON.parse(res.stdout)
+  assert.ok(data.targets.some((target) => target.id === 'next_shadcn'))
+  assert.ok(data.themes.some((theme) => theme.id === 'enterprise'))
+  assert.ok(data.domain_modules.some((module) => module.id === 'visual_graph'))
+
+  const themes = run(['marketplace', '--kind', 'themes', '--json'])
+  assert.equal(themes.status, 0, themes.stderr)
+  const filtered = JSON.parse(themes.stdout)
+  assert.ok(filtered.themes)
+  assert.equal(filtered.targets, undefined)
+})
+
 test('new creates a checkable project and migrate handles v0.1 no-op', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-new-'))
   try {
