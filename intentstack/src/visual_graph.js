@@ -23,6 +23,15 @@ export function renderGraphHtml(graph, history = []) {
   const actions = list(graph.actions, (action) => `<li><strong>${esc(action.id)}</strong> <span class="muted">${esc(action.type)} ${esc(action.entity)}</span></li>`)
   const workflows = list(graph.workflows, (workflow) => `<li><strong>${esc(workflow.id)}</strong> <span class="muted">trigger: ${esc(workflow.trigger?.action)}</span></li>`)
   const integrations = list(graph.integrations, (integration) => `<li><strong>${esc(integration.id)}</strong> <span class="muted">${esc(integration.type)}</span></li>`)
+  const moduleOwners = flattenOwners(graph.modules)
+  const modules = graph.modules?.modular ? `<p><strong>Root</strong><br /><span class="muted">${esc(graph.modules.root_path)}</span></p>
+    <p><strong>Includes</strong></p>
+    ${list(graph.modules.includes || [], (include) => `<li>${esc(include)}</li>`)}
+    <p><strong>Source Files</strong></p>
+    ${list(graph.modules.source_files || [], (file) => `<li><span class="muted">${esc(file)}</span></li>`)}
+    <p><strong>Owners</strong></p>
+    ${list(moduleOwners, (owner) => `<li><strong>${esc(owner.id)}</strong> <span class="muted">${esc(owner.file)}</span></li>`)}`
+    : '<p class="muted">Single-file intent.</p>'
   const patches = list(history.slice(-20).reverse(), (entry) => `<li>
     <strong>${esc(entry.timestamp)}</strong>
     <span class="muted">${esc(entry.patch)}</span>
@@ -72,6 +81,7 @@ export function renderGraphHtml(graph, history = []) {
       </section>
       <section><h2>Entities</h2>${entities}</section>
       <section><h2>Actions</h2>${actions}</section>
+      <section><h2>Modules</h2>${modules}</section>
       <section><h2>Workflows</h2>${workflows}</section>
       <section><h2>Integrations</h2>${integrations}</section>
       <section><h2>Patch History</h2>${patches}</section>
@@ -94,4 +104,20 @@ export function renderGraphHtml(graph, history = []) {
   </body>
 </html>
 `
+}
+
+function flattenOwners(modules) {
+  if (!modules?.owners) return []
+  const out = []
+  for (const [key, value] of Object.entries(modules.owners)) {
+    if (!value) continue
+    if (typeof value === 'string') {
+      out.push({ id: key, file: value })
+      continue
+    }
+    for (const [id, owner] of Object.entries(value)) {
+      if (owner?.file) out.push({ id: `${key}.${id}`, file: owner.file })
+    }
+  }
+  return out
 }

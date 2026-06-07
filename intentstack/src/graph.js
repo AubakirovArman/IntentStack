@@ -11,6 +11,14 @@ export function buildGraph(ast) {
   const navigation = ast.navigation || null
   const workflows = ast.workflows || []
   const integrations = ast.integrations || []
+  const modules = ast.__intentstack ? {
+    modular: ast.__intentstack.modular,
+    rootPath: ast.__intentstack.rootPath,
+    includes: ast.__intentstack.includes || [],
+    sourceFiles: ast.__intentstack.sourceFiles || [],
+    owners: ast.__intentstack.owners || {},
+    pathFiles: ast.__intentstack.pathFiles || {},
+  } : { modular: false, includes: [], sourceFiles: [], owners: {}, pathFiles: {} }
 
   const entityById = Object.fromEntries(entities.map((e) => [e.id, e]))
   const actionById = Object.fromEntries(actions.map((a) => [a.id, a]))
@@ -27,6 +35,7 @@ export function buildGraph(ast) {
     navigation,
     workflows,
     integrations,
+    modules,
     entityById,
     actionById,
     pageById,

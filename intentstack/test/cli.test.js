@@ -143,6 +143,17 @@ test('graph exports a Core IR summary as JSON', () => {
   assert.equal(data.project.id, 'voice_agent_site')
   assert.ok(data.entities.some((e) => e.id === 'Lead'))
   assert.ok(data.pages.some((p) => p.id === 'home'))
+  assert.equal(data.modules.modular, false)
+})
+
+test('graph exports module metadata for modular projects', () => {
+  const res = run(['graph', '--project', 'intentstack/examples/modular_site', '--json'])
+  assert.equal(res.status, 0, res.stderr)
+  const data = JSON.parse(res.stdout)
+  assert.equal(data.project.id, 'modular_site_example')
+  assert.equal(data.modules.modular, true)
+  assert.ok(data.modules.source_files.some((file) => /shared[\\/]navigation\.yaml$/.test(file)))
+  assert.match(data.modules.owners.entities.Lead.file, /backend[\\/]entities[\\/]lead\.entity\.yaml$/)
 })
 
 test('graph exports an HTML visual graph', () => {
@@ -157,6 +168,21 @@ test('graph exports an HTML visual graph', () => {
     assert.match(html, /Patch Builder/)
     assert.match(html, /function updatePatch/)
     assert.match(html, /voice_agent_site/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('graph HTML renders module graph for modular projects', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-module-graph-'))
+  try {
+    const out = join(dir, 'graph.html')
+    const res = run(['graph', '--project', 'intentstack/examples/modular_site', '--html', out])
+    assert.equal(res.status, 0, res.stderr)
+    const html = readFileSync(out, 'utf8')
+    assert.match(html, /Modules/)
+    assert.match(html, /shared[\\/]navigation\.yaml/)
+    assert.match(html, /backend[\\/]entities[\\/]lead\.entity\.yaml/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

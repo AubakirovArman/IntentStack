@@ -289,6 +289,11 @@ async function main() {
       for (const a of data.actions) console.log(`  ${a.id}: ${a.type}${a.entity ? ` ${a.entity}` : ''}`)
       console.log('Pages:')
       for (const p of data.pages) console.log(`  ${p.id} ${p.path}: ${p.sections.map((s) => `${s.id}:${s.type}`).join(', ')}`)
+      if (data.modules?.modular) {
+        console.log('Modules:')
+        console.log(`  root: ${data.modules.root_path}`)
+        console.log(`  files: ${data.modules.source_files.length}`)
+      }
     }
     return
   }
@@ -589,6 +594,13 @@ function graphSummary(graph) {
     })),
     workflows: graph.workflows.map((w) => ({ id: w.id, trigger: w.trigger })),
     integrations: graph.integrations.map((i) => ({ id: i.id, type: i.type })),
+    modules: graph.modules?.modular ? {
+      modular: true,
+      root_path: graph.modules.rootPath,
+      includes: graph.modules.includes,
+      source_files: graph.modules.sourceFiles,
+      owners: graph.modules.owners,
+    } : { modular: false, source_files: [] },
   }
 }
 
