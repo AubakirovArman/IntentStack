@@ -1,0 +1,4 @@
+section:
+  id: site_footer
+  type: footer
+  text: Generated from a shared frontend section module.

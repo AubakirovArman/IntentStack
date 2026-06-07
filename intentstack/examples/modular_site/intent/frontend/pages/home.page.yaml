@@ -1,0 +1,8 @@
+page:
+  id: home
+  path: /
+  layout: landing
+  sections:
+    - ref: hero
+    - ref: frontend_features
+    - ref: site_footer

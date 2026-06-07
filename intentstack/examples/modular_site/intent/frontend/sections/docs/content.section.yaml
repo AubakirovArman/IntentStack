@@ -1,0 +1,26 @@
+section:
+  id: docs_content
+  type: content
+  title: Modular frontend documentation
+  blocks:
+    - id: overview
+      type: heading
+      level: 2
+      text: Overview
+    - id: overview_text
+      type: paragraph
+      text: A root manifest can include frontend modules and assemble them into one validated application graph.
+    - id: layout
+      type: heading
+      level: 2
+      text: Layout
+    - id: layout_steps
+      type: list
+      items:
+        - Keep route metadata in page modules.
+        - Keep reusable UI sections in section modules.
+        - Reference sections by stable ids from page modules.
+    - id: command
+      type: code
+      language: bash
+      code: intentstack build --project .

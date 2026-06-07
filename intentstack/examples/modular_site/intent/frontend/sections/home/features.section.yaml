@@ -1,0 +1,12 @@
+section:
+  id: frontend_features
+  type: card_grid
+  title: Frontend modules
+  columns: 3
+  items:
+    - title: Pages
+      text: Route, layout, and section order stay in page modules.
+    - title: Sections
+      text: Hero, content, cards, and footers live in focused files.
+    - title: Reuse
+      text: Shared section refs can be used by more than one page.

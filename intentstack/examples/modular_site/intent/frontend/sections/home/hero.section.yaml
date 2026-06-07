@@ -1,0 +1,9 @@
+section:
+  id: hero
+  type: hero
+  title: Modular Intent
+  subtitle: Compose pages from focused page and section intent modules.
+  actions:
+    - label: Read docs
+      kind: primary
+      target: /docs

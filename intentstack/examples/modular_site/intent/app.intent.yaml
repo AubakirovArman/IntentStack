@@ -1,0 +1,10 @@
+version: 0.1
+
+project:
+  id: modular_site_example
+  name: Modular Site Example
+  target: web_ts_minimal
+
+includes:
+  - frontend/pages/*.yaml
+  - frontend/sections/**/*.yaml
