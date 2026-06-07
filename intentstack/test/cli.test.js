@@ -94,6 +94,76 @@ test('marketplace lists local targets, themes and domain modules', () => {
   assert.equal(filtered.targets, undefined)
 })
 
+test('configured plugin target adapters participate in validation, marketplace and build', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-plugin-target-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    mkdirSync(join(dir, 'plugins'), { recursive: true })
+    writeFileSync(join(dir, 'intentstack.config.yaml'), `intent: intent/app.intent.yaml
+out: app
+plugins:
+  targets:
+    - id: static_html
+      module: plugins/static-target.mjs
+`)
+    writeFileSync(join(dir, 'plugins/static-target.mjs'), `export const capabilities = {
+  id: 'static_html',
+  framework: 'static',
+  ui: 'none',
+  frontend: true,
+  backend: false,
+  database: false,
+  supported_components: ['hero'],
+  supported_actions: [],
+  supported_field_types: ['string'],
+}
+
+export const managedZones = ['dist']
+
+export function planFiles(graph) {
+  return {
+    'dist/index.html': '<!doctype html><title>' + graph.project.name + '</title><h1>' + graph.project.name + '</h1>\\n',
+  }
+}
+`)
+    writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: plugin_site
+  name: Plugin Site
+  target: static_html
+pages:
+  - id: home
+    path: /
+    sections:
+      - id: hero
+        type: hero
+        title: Plugin Site
+`)
+
+    const checked = run(['check', '--project', dir])
+    assert.equal(checked.status, 0, checked.stderr)
+
+    const capabilities = run(['list_capabilities', '--project', dir, '--target', 'static_html', '--json'])
+    assert.equal(capabilities.status, 0, capabilities.stderr)
+    assert.equal(JSON.parse(capabilities.stdout).targets.static_html.framework, 'static')
+
+    const schema = run(['schema', '--project', dir])
+    assert.equal(schema.status, 0, schema.stderr)
+    assert.ok(JSON.parse(schema.stdout).properties.project.properties.target.enum.includes('static_html'))
+
+    const market = run(['marketplace', '--project', dir, '--json'])
+    assert.equal(market.status, 0, market.stderr)
+    const target = JSON.parse(market.stdout).targets.find((item) => item.id === 'static_html')
+    assert.equal(target.source, 'plugin')
+
+    const built = run(['build', '--project', dir, '--no-format', '--no-verify'])
+    assert.equal(built.status, 0, built.stderr)
+    assert.match(readFileSync(join(dir, 'app/dist/index.html'), 'utf8'), /Plugin Site/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('new creates a checkable project and migrate handles v0.1 no-op', () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-new-'))
   try {

@@ -23,6 +23,7 @@ import { generateTestFiles } from './testgen.js'
 import { deploymentPlan } from './deploy.js'
 import { getThemePack, listThemePacks } from './themes.js'
 import { collaborationReport, formatCollabReport } from './collab.js'
+import { loadConfiguredPlugins } from './plugins.js'
 
 const args = process.argv.slice(2)
 const cmd = args[0]
@@ -73,6 +74,14 @@ async function main() {
     console.log(`\nok created IntentStack project -> ${dir}`)
     console.log('Next:  node <path-to-intentstack>/src/index.js check --project ' + dir)
     return
+  }
+
+  const cfg = await readConfig(projectDir)
+  try {
+    await loadConfiguredPlugins(projectDir, cfg)
+  } catch (e) {
+    console.error(`[E0900] Plugin load error:\n  ${e.message}`)
+    process.exit(2)
   }
 
   if (cmd === 'list_capabilities') {
@@ -149,8 +158,6 @@ async function main() {
     return
   }
 
-  const cfg = await readConfig(projectDir)
-
   if (cmd === 'themes') {
     const apply = flag('apply', flag('preset', (args[1] && !args[1].startsWith('--')) ? args[1] : null))
     if (!apply) {
@@ -196,6 +203,8 @@ async function main() {
         ui: target.ui,
         components: target.supported_components.length,
         actions: target.supported_actions.length,
+        source: target.plugin ? 'plugin' : 'core',
+        module: target.module,
       })),
       themes: listThemePacks(),
       domain_modules: Object.entries(DOMAIN_MODULES).map(([id, module]) => ({ id, ...module })),
