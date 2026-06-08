@@ -62,3 +62,74 @@ pages:
             type: code
             language: bash
             code: intentstack build --project .
+          - id: cards_example
+            type: example
+            title: Card grid live preview
+            text: The docs block keeps the preview and the semantic patch together.
+            section: preview_cards
+            language: yaml
+            code: |
+              patch:
+                - op: section.add
+                  page: docs
+                  section:
+                    id: preview_cards
+                    type: card_grid
+                    embed_only: true
+          - id: metrics_example
+            type: example
+            title: Metrics live preview
+            text: Stats components can document product KPIs without leaving the page.
+            section: preview_metrics
+            language: yaml
+            code: |
+              patch:
+                - op: section.add
+                  page: docs
+                  section:
+                    id: preview_metrics
+                    type: stats
+                    embed_only: true
+          - id: live_patch_flow
+            type: example
+            title: Live patch flow
+            text: Edit intent, preview the generated component, then inspect the patch in the same docs block.
+            section: live_patch_cards
+            language: yaml
+            code: |
+              version: 0.1
+              patch:
+                - op: content.example.add
+                  section: docs_content
+                  preview_section: live_patch_cards
+                  code: |
+                    patch: []
+      - id: preview_cards
+        type: card_grid
+        title: Reusable cards
+        embed_only: true
+        items:
+          - title: Intent patch
+            text: Small semantic changes remain readable.
+          - title: Generated preview
+            text: The component renders next to the patch code.
+      - id: preview_metrics
+        type: stats
+        title: Preview metrics
+        embed_only: true
+        items:
+          - label: Examples
+            value: "12"
+            text: Verified target pairs
+          - label: Build time
+            value: "<1m"
+            text: Typical local preview
+      - id: live_patch_cards
+        type: card_grid
+        title: Live patch cards
+        embed_only: true
+        items:
+          - title: Edit intent
+            text: Apply a semantic patch.
+          - title: Preview output
+            text: Inspect generated code and UI together.

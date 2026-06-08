@@ -1,0 +1,46 @@
+version: 0.1
+
+# This file intentionally contains mistakes to demonstrate the validator.
+# Run:  node ../intentstack/src/index.js check --intent ./broken.example.yaml --project .
+# (or)  intentstack check --intent demo/intent/broken.example.yaml
+
+project:
+  id: broken_demo
+  target: web_ts_minimal
+
+entities:
+  - id: Lead
+    table: leads
+    fields:
+      - id: name
+        type: string
+        required: true
+      - id: phone
+        type: string
+        required: true
+
+actions:
+  - id: create_lead
+    type: create_record
+    entity: Lead
+
+pages:
+  - id: home
+    path: /
+    layout: landing
+    sections:
+      - id: hero
+        type: hreo            # E4004: unknown component  -> "Did you mean hero?"
+        title: Welcome
+
+      - id: lead_form
+        type: form
+        entity: Leadx         # E2201: unknown entity      -> "Did you mean Lead?"
+        fields: [name, phone, emial]   # E3003: 'emial' is not a field of Lead
+        submit:
+          action: craete_lead # E3002: unknown action      -> "Did you mean create_lead?"
+
+  - id: dupe
+    path: /                   # E2023: duplicate route "/"
+    layout: dashboard         # W2001: dashboard is public (warning, non-blocking)
+    sections: []

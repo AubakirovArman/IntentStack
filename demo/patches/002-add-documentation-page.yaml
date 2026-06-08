@@ -1,0 +1,97 @@
+version: 0.1
+patch:
+  - op: navbar.item.add
+    navbar: nav
+    item:
+      label: Docs
+      href: /docs
+
+  - op: page.create
+    id: docs
+    path: /docs
+    layout: docs
+
+  - op: section.add
+    page: docs
+    section:
+      id: docs_nav
+      type: navbar
+      logo: VoiceAgent
+      items:
+        - label: Home
+          href: /
+        - label: Features
+          href: /#features
+        - label: Contact
+          href: /#lead_form
+        - label: Docs
+          href: /docs
+
+  - op: section.add
+    page: docs
+    section:
+      id: docs_content
+      type: content
+      title: IntentStack Documentation
+      blocks:
+        - id: overview
+          type: heading
+          level: 2
+          text: What this tool does
+        - id: overview_text
+          type: paragraph
+          text: IntentStack lets an AI agent describe an application as typed intent. The compiler validates that intent and generates frontend, backend, database schema, API clients, migrations and tests for the selected target.
+        - id: workflow
+          type: heading
+          level: 2
+          text: Basic workflow
+        - id: workflow_steps
+          type: list
+          items:
+            - Edit intent files or apply a semantic patch.
+            - Run intentstack check to validate references and target capabilities.
+            - Run intentstack build to regenerate managed app code.
+            - Run the generated app and verify the result in the browser.
+        - id: patch_example_title
+          type: heading
+          level: 2
+          text: Example patch
+        - id: patch_example
+          type: code
+          language: yaml
+          code: |
+            version: 0.1
+            patch:
+              - op: page.create
+                id: docs
+                path: /docs
+                layout: docs
+              - op: section.add
+                page: docs
+                section:
+                  id: docs_content
+                  type: content
+                  title: Documentation
+        - id: generated_zones
+          type: callout
+          title: Generated zones
+          text: Do not edit files under src/generated, server/generated, app/generated or migrations by hand. Change intent and rebuild instead.
+        - id: supported_surface
+          type: heading
+          level: 2
+          text: Current supported surface
+        - id: surface_table
+          type: table
+          columns: [Area, Supported now]
+          rows:
+            - [Targets, web_ts_minimal and next_shadcn]
+            - [Components, navbar, hero, card_grid, content, form, table, record_detail, stats, pricing_cards, footer, custom_component]
+            - [Actions, create_record, list_records, get_record, update_record, delete_record, subscribe_records]
+            - [Database, SQLite/libSQL and PostgreSQL drivers]
+
+  - op: section.add
+    page: docs
+    section:
+      id: docs_footer
+      type: footer
+      text: IntentStack documentation generated from semantic intent.

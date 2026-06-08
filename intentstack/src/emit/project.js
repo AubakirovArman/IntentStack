@@ -130,6 +130,12 @@ function envExample(graph, opts = {}) {
     'PORT=8787',
     ...opts.driver.envExampleLines(graph),
     '# VITE_API_URL=   # leave empty in dev (vite proxies /api)',
+    '# INTENTSTACK_CORS_ORIGINS=http://localhost:5173,http://localhost:4173',
+    '# INTENTSTACK_RATE_LIMIT_MAX=120',
+    '# INTENTSTACK_RATE_LIMIT_WINDOW_MS=60000',
+    '# Route override example: INTENTSTACK_RATE_LIMIT_MAX_POST_API_LEADS=30',
+    '# INTENTSTACK_ROUTE_TIMEOUT_MS=30000',
+    '# Route override example: INTENTSTACK_ROUTE_TIMEOUT_MS_GET_API_LEADS=10000',
     '',
     '# OpenTelemetry OTLP/HTTP trace export. Leave unset to disable.',
     '# OTEL_SERVICE_NAME=intentstack-generated',
@@ -142,6 +148,10 @@ function envExample(graph, opts = {}) {
       '',
       'INTENTSTACK_SESSION_SECRET=replace-with-at-least-32-random-characters',
       'INTENTSTACK_SESSION_TTL_SECONDS=28800',
+      'INTENTSTACK_SESSION_ROTATE_AFTER_SECONDS=14400',
+      'INTENTSTACK_PASSWORD_MIN_LENGTH=12',
+      'INTENTSTACK_AUTH_LOCKOUT_ATTEMPTS=5',
+      'INTENTSTACK_AUTH_LOCKOUT_WINDOW_MS=900000',
       '# Store bcrypt hashes in auth password env vars. Use INTENTSTACK_ALLOW_PLAIN_PASSWORDS=true only for local demos.',
     )
     for (const user of declaredUsers(graph)) {

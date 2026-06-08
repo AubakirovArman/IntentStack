@@ -88,3 +88,12 @@ writes existing objects back to owner files. Use `--out-intent <file>` only when
 exporting one assembled intent file.
 
 Use `intentstack list_capabilities --json` for the current complete patch op list.
+
+## Module and file-size policy
+
+All non-generated source files in active development should stay small and replaceable.
+If a file is likely to grow beyond 300 lines, split it into focused modules first and keep each module
+under `300` lines, with one narrow ownership boundary per module.
+
+Current oversized files are listed in `intentstack/docs/oversized-files.md` and should be split as a priority
+before major new features are merged.

@@ -1,11 +1,23 @@
 // Structured diagnostics (PRD §25). Errors block build; warnings do not.
 // Every diagnostic is consumable by an AI agent: { code, severity, message, path, suggestion, fix_hint }.
 
+import { warningCatalogEntry } from './diagnostics/catalog.js'
+
 export class Diagnostics {
   constructor() { this.items = [] }
   push(d) { this.items.push(d); return d }
   error(code, message, opts = {}) { return this.push({ code, severity: 'error', message, ...opts }) }
-  warn(code, message, opts = {}) { return this.push({ code, severity: 'warning', message, ...opts }) }
+  warn(code, message, opts = {}) {
+    const entry = warningCatalogEntry(code)
+    return this.push({
+      code,
+      severity: 'warning',
+      rule_id: entry?.rule_id || `uncataloged.${String(code).toLowerCase()}`,
+      category: entry?.category || 'uncataloged',
+      message,
+      ...opts,
+    })
+  }
   info(code, message, opts = {}) { return this.push({ code, severity: 'info', message, ...opts }) }
   get errors() { return this.items.filter((i) => i.severity === 'error') }
   get warnings() { return this.items.filter((i) => i.severity === 'warning') }

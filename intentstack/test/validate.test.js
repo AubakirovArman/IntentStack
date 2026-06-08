@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { validate } from '../src/validate.js'
 import { parseIntentFile } from '../src/parse.js'
+import { warningCatalog } from '../src/diagnostics/catalog.js'
 
 const demoIntent = fileURLToPath(new URL('../../demo/intent/app.intent.yaml', import.meta.url))
 
@@ -23,6 +24,22 @@ test('demo intent validates with only the public dashboard warning', async () =>
   const d = validate(ast)
   assert.equal(d.hasErrors(), false)
   assert.deepEqual(d.warnings.map((w) => w.code), ['W2001'])
+  assert.deepEqual(d.warnings.map((w) => w.rule_id), ['page.dashboard.public'])
+})
+
+test('validation warnings are cataloged with stable rule metadata', () => {
+  const d = validate({
+    project: { id: 'warns', target: 'web_ts_minimal' },
+    navigation: { items: [{ label: 'Docs', href: '/docs' }, { label: 'Docs', href: '/docs-2' }] },
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero' }] }],
+  })
+  const catalog = warningCatalog()
+  assert.ok(d.warnings.length >= 2)
+  for (const warning of d.warnings) {
+    assert.ok(catalog[warning.code], `${warning.code} missing from catalog`)
+    assert.equal(warning.rule_id, catalog[warning.code].rule_id)
+    assert.equal(warning.category, catalog[warning.code].category)
+  }
 })
 
 test('table row edit action requires update_record capability in intent', () => {
@@ -45,6 +62,18 @@ test('table row edit action requires update_record capability in intent', () => 
   })
   assert.equal(d.hasErrors(), true)
   assert.ok(d.errors.some((e) => e.code === 'E3009'))
+})
+
+test('detects ambiguous entity field names with precise paths', () => {
+  const d = validate({
+    version: '0.1',
+    project: { id: 'ambiguous_fields', target: 'web_ts_minimal' },
+    entities: [{ id: 'Lead', fields: [{ id: 'email', type: 'string' }, { id: 'Email', type: 'string' }] }],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Home' }] }],
+  })
+  assert.equal(d.hasErrors(), true)
+  const error = d.errors.find((item) => item.code === 'E2014')
+  assert.equal(error?.path, 'entities[0].fields[1].id')
 })
 
 test('table row detail action requires a matching record_detail page', () => {

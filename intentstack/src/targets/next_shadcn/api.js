@@ -2,9 +2,11 @@ import { ENTITY_ACTIONS } from '../../registry.js'
 import { hasActionAuth, hasPageAuth, isActivePolicy, roleLiteral } from '../../emit/shared/modules.js'
 import { tenancyConfig } from '../../emit/shared/tenancy.js'
 import { BANNER } from './constants.js'
+import { routeTimeoutHelper } from './api_timeout.js'
 
 export function apiRoutes(graph) {
   const files = {}
+  files['lib/route-timeout.ts'] = routeTimeoutHelper()
   files['app/api/health/route.ts'] = BANNER + `export async function GET() {
   return Response.json({ ok: true })
 }
@@ -25,6 +27,19 @@ export async function GET() {
   })
 }
 `
+  files['app/api/telemetry/exceptions/route.ts'] = BANNER + `export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}))
+  console.error(JSON.stringify({
+    level: 'error',
+    type: 'runtime_exception',
+    message: typeof body.message === 'string' ? body.message : 'unknown',
+    stack: typeof body.stack === 'string' ? body.stack : null,
+    digest: typeof body.digest === 'string' ? body.digest : null,
+    url: typeof body.url === 'string' ? body.url : null,
+  }))
+  return Response.json({ ok: true })
+}
+`
   if (hasActionAuth(graph.actions) || hasPageAuth(graph)) {
     files['app/api/auth/login/route.ts'] = BANNER + `import { loginRequest } from '@/lib/auth'
 
@@ -36,6 +51,12 @@ export async function POST(req: Request) {
 
 export async function POST(req: Request) {
   return logoutRequest(req)
+}
+`
+    files['app/api/auth/refresh/route.ts'] = BANNER + `import { refreshRequest } from '@/lib/auth'
+
+export async function POST(req: Request) {
+  return refreshRequest(req)
 }
 `
     files['app/api/auth/me/route.ts'] = BANNER + `import { meRequest } from '@/lib/auth'
@@ -58,19 +79,19 @@ export async function GET(req: Request) {
     const base = e.table || tname
     const types = new Set(actions.map((a) => a.type))
     if (types.has('list_records') || types.has('create_record')) {
-      files[`app/api/${base}/route.ts`] = collectionRoute(tname, types, actions, opts)
+      files[`app/api/${base}/route.ts`] = collectionRoute(tname, base, types, actions, opts)
     }
     if (types.has('get_record') || types.has('update_record') || types.has('delete_record')) {
-      files[`app/api/${base}/[id]/route.ts`] = itemRoute(tname, types, actions, opts)
+      files[`app/api/${base}/[id]/route.ts`] = itemRoute(tname, base, types, actions, opts)
     }
     if (types.has('subscribe_records')) {
-      files[`app/api/${base}/stream/route.ts`] = streamRoute(tname, actions, opts)
+      files[`app/api/${base}/stream/route.ts`] = streamRoute(tname, base, actions, opts)
     }
   }
   return files
 }
 
-function collectionRoute(tname, types, actions, opts) {
+function collectionRoute(tname, base, types, actions, opts) {
   const action = (type) => actions.find((a) => a.type === type)
   const drizzleImports = ['desc']
   if (opts.tenancy && types.has('list_records')) drizzleImports.push('eq')
@@ -80,35 +101,40 @@ function collectionRoute(tname, types, actions, opts) {
 import { ${tname} } from '@/lib/db/schema'
 import { ${drizzleImports.join(', ')} } from 'drizzle-orm'
 import { ${tname}CreateSchema } from '@/lib/validators/${tname}'
+import { withRouteTimeout } from '@/lib/route-timeout'
 ${opts.useAuth ? `import { assertRequestRole } from '@/lib/auth'\n` : ''}${opts.useWorkflows ? `import { runWorkflows } from '@/lib/workflows'\n` : ''}
 ${tenantHelpers(opts)}
 `
   if (types.has('list_records')) out += `
 export async function GET(${getNeedsReq ? 'req: Request' : ''}) {
+  return withRouteTimeout('GET', '/${base}', async () => {
 ${nextAuthGuard(action('list_records'), 'req')}
 ${nextTenantGuard(opts, 'req')}
   await ensureMigrated()
   const rows = await db.select().from(${tname})${tenantWhere}.orderBy(desc(${tname}.createdAt))
   return Response.json({ data: rows })
+  })
 }
 `
   if (types.has('create_record')) out += `
 export async function POST(req: Request) {
+  return withRouteTimeout('POST', '/${base}', async () => {
 ${nextAuthGuard(action('create_record'), 'req')}
 ${nextTenantGuard(opts, 'req')}
   await ensureMigrated()
   const body = await req.json().catch(() => null)
   const parsed = ${tname}CreateSchema.safeParse(body)
   if (!parsed.success) return Response.json({ error: 'validation', details: parsed.error.flatten() }, { status: 400 })
-  const result = await db.insert(${tname}).values({ ...parsed.data${opts.tenancy ? ', tenantId: tenant' : ''}, createdAt: new Date() }).returning()
+  const result = await db.transaction((tx) => tx.insert(${tname}).values({ ...parsed.data${opts.tenancy ? ', tenantId: tenant' : ''}, createdAt: new Date() }).returning())
 ${nextWorkflowCall(opts, action('create_record'), 'result[0]')}
   return Response.json({ data: result[0] }, { status: 201 })
+  })
 }
 `
   return out
 }
 
-function itemRoute(tname, types, actions, opts) {
+function itemRoute(tname, base, types, actions, opts) {
   const idWhere = opts.tenancy
     ? `and(eq(${tname}.id, Number(params.id)), eq(${tname}.tenantId, tenant))`
     : `eq(${tname}.id, Number(params.id))`
@@ -116,6 +142,7 @@ function itemRoute(tname, types, actions, opts) {
     `import { db, ensureMigrated } from '@/lib/db/client'`,
     `import { ${tname} } from '@/lib/db/schema'`,
     `import { eq${opts.tenancy ? ', and' : ''} } from 'drizzle-orm'`,
+    `import { withRouteTimeout } from '@/lib/route-timeout'`,
   ]
   if (types.has('update_record')) imports.push(`import { ${tname}CreateSchema } from '@/lib/validators/${tname}'`)
   if (opts.useAuth) imports.push(`import { assertRequestRole } from '@/lib/auth'`)
@@ -128,52 +155,60 @@ ${tenantHelpers(opts)}
 `
   if (types.has('get_record')) out += `
 export async function GET(_req: Request, { params }: Ctx) {
+  return withRouteTimeout('GET', '/${base}/:id', async () => {
 ${nextAuthGuard(action('get_record'), '_req')}
 ${nextTenantGuard(opts, '_req')}
   await ensureMigrated()
   const rows = await db.select().from(${tname}).where(${idWhere})
   if (rows.length === 0) return Response.json({ error: 'not_found' }, { status: 404 })
   return Response.json({ data: rows[0] })
+  })
 }
 `
   if (types.has('update_record')) out += `
 export async function PUT(req: Request, { params }: Ctx) {
+  return withRouteTimeout('PUT', '/${base}/:id', async () => {
 ${nextAuthGuard(action('update_record'), 'req')}
 ${nextTenantGuard(opts, 'req')}
   await ensureMigrated()
   const body = await req.json().catch(() => null)
   const parsed = ${tname}CreateSchema.partial().safeParse(body)
   if (!parsed.success) return Response.json({ error: 'validation', details: parsed.error.flatten() }, { status: 400 })
-  const result = await db.update(${tname}).set(parsed.data).where(${idWhere}).returning()
+  const result = await db.transaction((tx) => tx.update(${tname}).set(parsed.data).where(${idWhere}).returning())
   if (result.length === 0) return Response.json({ error: 'not_found' }, { status: 404 })
 ${nextWorkflowCall(opts, action('update_record'), 'result[0]')}
   return Response.json({ data: result[0] })
+  })
 }
 `
   if (types.has('delete_record')) out += `
 export async function DELETE(_req: Request, { params }: Ctx) {
+  return withRouteTimeout('DELETE', '/${base}/:id', async () => {
 ${nextAuthGuard(action('delete_record'), '_req')}
 ${nextTenantGuard(opts, '_req')}
   await ensureMigrated()
-  await db.delete(${tname}).where(${idWhere})
+  await db.transaction((tx) => tx.delete(${tname}).where(${idWhere}))
 ${nextWorkflowCall(opts, action('delete_record'), '{ id: Number(params.id) }')}
   return Response.json({ ok: true })
+  })
 }
 `
   return out
 }
 
-function streamRoute(tname, actions, opts) {
+function streamRoute(tname, base, actions, opts) {
   const action = actions.find((a) => a.type === 'subscribe_records')
   const tenantWhere = opts.tenancy ? `.where(eq(${tname}.tenantId, tenant))` : ''
   return BANNER + `import { db, ensureMigrated } from '@/lib/db/client'
 import { ${tname} } from '@/lib/db/schema'
 import { desc${opts.tenancy ? ', eq' : ''} } from 'drizzle-orm'
+import { withRouteTimeout } from '@/lib/route-timeout'
 ${opts.useAuth ? `import { assertRequestRole } from '@/lib/auth'\n` : ''}
 export const dynamic = 'force-dynamic'
 ${tenantHelpers(opts)}
 
 export async function GET(req: Request) {
+  return withRouteTimeout('GET', '/${base}/stream', async () => {
 ${nextAuthGuard(action, 'req')}${nextTenantGuard(opts, 'req')}  await ensureMigrated()
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -199,6 +234,7 @@ ${nextAuthGuard(action, 'req')}${nextTenantGuard(opts, 'req')}  await ensureMigr
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
     },
+  })
   })
 }
 `
@@ -228,7 +264,7 @@ function nextTenantGuard(opts, reqName) {
 
 function nextAuthGuard(action, reqName) {
   if (!action || !isActivePolicy(action.auth)) return ''
-  return `  const auth = assertRequestRole(${reqName}, ${roleLiteral(action.auth)})
+  return `  const auth = await assertRequestRole(${reqName}, ${roleLiteral(action.auth)})
   if (auth) return auth
 `
 }

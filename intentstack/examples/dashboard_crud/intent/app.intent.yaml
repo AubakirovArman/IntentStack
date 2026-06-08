@@ -26,6 +26,19 @@ entities:
         type: enum
         values: [new, contacted, closed]
         default: new
+      - id: source
+        type: enum
+        label: Source
+        values: [website, referral, event]
+      - id: notes
+        type: text
+        label: Notes
+      - id: qualified
+        type: boolean
+        label: Qualified
+      - id: follow_up_at
+        type: datetime
+        label: Follow-up at
 
 actions:
   - id: create_lead
@@ -57,7 +70,7 @@ pages:
         type: form
         title: Add lead
         entity: Lead
-        fields: [name, email]
+        fields: [name, email, status, source, notes, qualified, follow_up_at]
         submit:
           action: create_lead
           success_message: Lead added.
@@ -72,7 +85,24 @@ pages:
         entity: Lead
         source:
           action: list_leads
-        columns: [name, email, status]
+        columns: [name, email, status, source, qualified, follow_up_at]
+        seed:
+          - name: Ada Lovelace
+            email: ada@example.com
+            status: contacted
+            source: referral
+            qualified: true
+          - name: Grace Hopper
+            email: grace@example.com
+            status: new
+            source: event
+            qualified: false
+        sort:
+          default: follow_up_at
+          direction: asc
+        filters:
+          - status
+          - source
         row_actions:
           - type: detail
           - type: edit
@@ -88,6 +118,6 @@ pages:
         entity: Lead
         source:
           action: get_lead
-        fields: [name, email, status]
+        fields: [name, email, status, source, notes, qualified, follow_up_at]
         update:
           action: update_lead

@@ -73,6 +73,25 @@ includes:
   }
 })
 
+test('loader rejects untrusted and escaping include paths', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-bad-include-'))
+  try {
+    mkdirSync(join(dir, 'intent'), { recursive: true })
+    for (const include of ['../outside.yaml', '/tmp/outside.yaml', 'plugins/*.yaml', 'frontend/../shared/*.yaml']) {
+      writeFileSync(join(dir, 'intent/app.intent.yaml'), `version: 0.1
+project:
+  id: bad_include
+  target: web_ts_minimal
+includes:
+  - ${JSON.stringify(include)}
+`)
+      await assert.rejects(() => loadIntentProject(dir, {}), /Include ".*" (cannot contain "\.\." path traversal|must be relative|must be under shared\/, backend\/, or frontend\/)/)
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('validator warns when a non-optional include glob matches no files', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'intentstack-empty-include-'))
   try {

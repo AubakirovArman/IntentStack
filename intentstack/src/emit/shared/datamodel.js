@@ -10,6 +10,8 @@ export const schemaBody = (graph) => dbDriver(graph).schemaBody(graph)
 
 export const migrationSql = (graph) => dbDriver(graph).migrationSql(graph)
 
+export const migrationRollbackSql = (graph) => dbDriver(graph).rollbackMigrationSql({ entities: [] }, dbDriver(graph).schemaSnapshot(graph))
+
 export const migrationManifest = (graph) => dbDriver(graph).migrationManifest(graph)
 
 function zodFor(f) {

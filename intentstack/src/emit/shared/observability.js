@@ -1,4 +1,4 @@
-export function otelTs(graph, banner) {
+export function otelTs(graph, banner = '') {
   const serviceName = graph.project?.id || graph.project?.name || 'intentstack-generated'
   return banner + `export type OTelAttributeValue = string | number | boolean | null | undefined
 

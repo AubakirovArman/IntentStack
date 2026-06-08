@@ -1,0 +1,4 @@
+# IntentStack project config (read by the CLI for defaults).
+intent: intent/app.intent.yaml
+out: app
+target: web_ts_minimal

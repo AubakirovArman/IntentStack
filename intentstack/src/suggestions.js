@@ -1,4 +1,6 @@
 import YAML from 'js-yaml'
+import { ACTION_TYPES, COMPONENT_TYPES, FIELD_TYPES } from './registry.js'
+import { patchOps } from './patch.js'
 
 export function intentSuggestions(graph, opts = {}) {
   const suggestions = []
@@ -77,6 +79,35 @@ export function intentSuggestions(graph, opts = {}) {
   return suggestions.slice(0, opts.limit || 6)
 }
 
+export function intentCompletions(graph, opts = {}) {
+  const prefix = String(opts.prefix || '').toLowerCase()
+  const limit = Number(opts.limit || 25) || 25
+  const items = []
+  for (const key of ['version', 'project', 'theme', 'navigation', 'auth', 'tenancy', 'entities', 'actions', 'pages', 'workflows', 'integrations']) {
+    items.push(completion(key, 'root_key', `${key}:`, 'Top-level intent key'))
+  }
+  for (const type of COMPONENT_TYPES) items.push(completion(type, 'component_type', type, 'Supported page section type'))
+  for (const type of ACTION_TYPES) items.push(completion(type, 'action_type', type, 'Supported action type'))
+  for (const type of FIELD_TYPES) items.push(completion(type, 'field_type', type, 'Supported entity field type'))
+  for (const op of patchOps()) items.push(completion(op, 'patch_op', op, 'Semantic patch operation'))
+  for (const entity of graph.entities || []) items.push(completion(entity.id, 'entity', entity.id, `Entity ${entity.table || entity.id.toLowerCase()}`))
+  for (const action of graph.actions || []) items.push(completion(action.id, 'action', action.id, `${action.type}${action.entity ? ` for ${action.entity}` : ''}`))
+  for (const page of graph.pages || []) {
+    items.push(completion(page.id, 'page', page.id, page.path || '/'))
+    for (const section of page.sections || []) items.push(completion(section.id, 'section', section.id, `${section.type} on ${page.id}`))
+  }
+  for (const item of intentSuggestions(graph, { limit: opts.suggestionLimit || 6 })) {
+    items.push({ label: item.id, kind: 'patch_suggestion', insert_text: item.yaml, detail: item.title, patch: item.patch })
+  }
+  return unique(items)
+    .filter((item) => !prefix || item.label.toLowerCase().startsWith(prefix) || item.insert_text.toLowerCase().includes(prefix))
+    .slice(0, limit)
+}
+
+function completion(label, kind, insertText, detail) {
+  return { label, kind, insert_text: insertText, detail }
+}
+
 function suggestion(id, titleText, reason, patch) {
   return {
     id,
@@ -85,6 +116,16 @@ function suggestion(id, titleText, reason, patch) {
     patch,
     yaml: YAML.dump({ version: '0.1', patch }, { lineWidth: 100, noRefs: true }),
   }
+}
+
+function unique(items) {
+  const seen = new Set()
+  return items.filter((item) => {
+    const key = `${item.kind}:${item.label}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function title(value) {

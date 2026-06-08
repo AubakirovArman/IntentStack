@@ -34,9 +34,16 @@ fn has_flag(args: &[OsString], flag: &str) -> bool {
     args.iter().any(|arg| arg == flag)
 }
 
+fn flag_value(args: &[OsString], flag: &str) -> Option<PathBuf> {
+    args.iter()
+        .position(|arg| arg == flag)
+        .and_then(|index| args.get(index + 1))
+        .map(PathBuf::from)
+}
+
 fn run_core(args: &[OsString]) -> i32 {
     let Some(command) = args.first().and_then(|arg| arg.to_str()) else {
-        eprintln!("usage: intentstack core <version|check|inspect|plan> [intent-file] [--json]");
+        eprintln!("usage: intentstack core <version|check|inspect|plan|emit> [intent-file] [--json] [--out DIR]");
         return 2;
     };
     match command {
@@ -56,7 +63,7 @@ fn run_core(args: &[OsString]) -> i32 {
                 0
             }
         }
-        "check" | "inspect" | "plan" => {
+        "check" | "inspect" | "plan" | "emit" => {
             let Some(path) = args
                 .iter()
                 .skip(1)
@@ -84,6 +91,39 @@ fn run_core(args: &[OsString]) -> i32 {
                         );
                         for file in plan.files {
                             println!("{}  {}  {}", file.kind, file.managed_zone, file.path);
+                        }
+                        0
+                    }
+                }
+                Ok(compiled) if command == "emit" => {
+                    let generated = intent_core::emit_generated_files(&compiled.graph);
+                    if let Some(out_dir) = flag_value(args, "--out") {
+                        if let Err(err) = intent_core::write_generated_files(&generated, &out_dir) {
+                            eprintln!("failed to write Rust emitted files: {err}");
+                            return 1;
+                        }
+                    }
+                    if json {
+                        print_json(&serde_json::json!({
+                            "ok": true,
+                            "diagnostics": compiled.diagnostics,
+                            "summary": compiled.graph.summary(),
+                            "generated": generated,
+                        }))
+                    } else {
+                        println!(
+                            "IntentStack Rust emit: target={} files={}",
+                            generated.target,
+                            generated.files.len()
+                        );
+                        for file in generated.files {
+                            println!(
+                                "{}  {}  {}  {} bytes",
+                                file.kind,
+                                file.managed_zone,
+                                file.path,
+                                file.content.len()
+                            );
                         }
                         0
                     }
@@ -151,7 +191,7 @@ fn run_core(args: &[OsString]) -> i32 {
         _ => {
             eprintln!("unknown Rust core command {command}");
             eprintln!(
-                "usage: intentstack core <version|check|inspect|plan> [intent-file] [--json]"
+                "usage: intentstack core <version|check|inspect|plan|emit> [intent-file] [--json] [--out DIR]"
             );
             2
         }

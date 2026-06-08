@@ -1,60 +1,131 @@
-# Epic Status
+# IntentStack Epics (100)
 
-Status legend:
+This is a practical roadmap focused on:
+- compiler/runtime correctness,
+- security and production readiness,
+- modularity and scalability,
+- demo application quality,
+- developer experience and ecosystem growth.
 
-- `done`: implemented and covered by tests or generated builds.
-- `partial`: useful implementation exists, but PRD scope is not fully closed.
-- `planned`: no meaningful implementation yet.
+Legend:
+- Priority: P0 (critical), P1 (high), P2 (normal), P3 (future)
+- Effort: XS, S, M, L, XL
+- Status: done / partial / planned
 
-## v0.1
+## 1) Core correctness and language quality (1-25)
 
-1. Rust CLI: `done`. Cargo workspace and `intent_cli` binary exist; unit and integration tests prove the Rust entrypoint runs compiler commands (`schema`, `list_capabilities`) and Rust-native core commands (`check`, `inspect`, `plan`).
-2. DSL schema and strict validation: `done`. Semantic validator exists, unsupported versions are rejected, and `intentstack schema` plus `schema/intent.v0.1.schema.json` expose the JSON Schema contract.
-3. Component and target registry: `done`. Registry files exist and are tested against in-code capabilities.
-4. Full patch command set: `done`. The PRD command surface is implemented and exposed through `patchOps()`/`list_capabilities`.
-5. UI component catalog: `done`. `navbar`, `hero`, `card_grid`, `pricing_cards`, `stats`, `form`, `table`, `record_detail`, `footer`, `custom_component` are supported.
-6. CRUD completeness: `done`. CRUD routes and clients are generated; dashboard row actions support detail/edit/delete, and dedicated dynamic record detail pages are generated for both targets.
-7. CLI completeness: `done`. `new`, `check`, `build`, `apply`, `plan`, `diff`, `explain`, `doctor`, `migrate`, `list_capabilities`, `schema`, `graph`, `editor`, `openapi`, `testgen`, `deploy`, `themes`, `marketplace`, `stats`, `verify`, and `docs` exist; `build` now includes normalize, format, and generated build verification phases.
-8. Generated/custom extension model: `done`. `custom_component` validates source/export, validates declared props schemas, and emits wrappers with typed props for both targets.
-9. Testing system: `done`. Unit, patch, golden, registry, CLI, diff, generated API contract tests, and examples x targets verify tests exist; GitHub Actions runs lint, Node tests, Rust tests, and generated app build matrix for both targets.
-10. Docs and AI-agent protocol: `done`. Core docs exist, AGENTS/README are current, and `intentstack docs --out` generates a static documentation site.
-11. Security, verification, metrics: `done`. Validation, safe CRUD basics, secret checks, auth guards, sessions, generated health/metrics endpoints, `verify`, `stats`, and `security` audit gates exist and are tested.
+1. [done] Normalize entity fields to IR refs (`fields: [name] -> {id, ref}`) to close semantic gaps in normalization.
+2. [done] Persist normalized AST output (including id/ref conversion) to avoid implicit behavior at validation time.
+3. [done] Implement full reference graph resolver for entities, actions, sections, pages, and intent includes.
+4. [done] Add schema-level cycle detection for cross-entity and include references.
+5. [done] Detect ambiguous field names in entities and report line-precise diagnostics.
+6. [done] Add typed symbol table for entity, action, section, and page namespaces.
+7. [done] Add IR-level type inference for computed / expression-like values.
+8. [done] Track resolved references in emitted IR so downstream codegen can use canonical links.
+9. [done] Add semantic validation stage for `content.example` placement + embed-only constraints.
+10. [done] Add deterministic module ordering for patch writes to avoid nondeterministic diffs.
+11. [done] Add atomic patch execution with rollback when any op fails.
+12. [done] Fix operation ordering for operations that mutate IDs/references (race-safe patch semantics).
+13. [done] Add patch idempotency checks to prevent duplicated side effects.
+14. [done] Add patch dry-run preview diff with semantic + file modes.
+15. [done] Expose conflict explanation for partial failures (where to look, what to fix).
+16. [done] Add capability-aware patch pre-check before mutation.
+17. [done] Add support for multi-op patch transactions across files.
+18. [done] Add first-class IR docs and JSON schema for `patch` operations.
+19. [done] Add strict and clear unsupported version checks in parser/validator.
+20. [done] Add version migration command for intent schemas across breaking changes.
+21. [done] Enable compiler plugin hooks for custom validators.
+22. [done] Add structured error codes for all compiler warnings (not just free text).
+23. [done] Add machine-readable warning catalog and rule IDs.
+24. [done] Add experimental diff optimizer (semantic minimal patches only).
+25. [done] Add compile-time diagnostics for include cycles and unresolved references.
 
-## Roadmap
+## 2) Emission pipeline, adapters, and generators (26-45)
 
-12. Auth + permissions: `done`. Users, roles, env-backed passwords, sessions/login/logout/me, protected pages, protected API and RBAC guards are generated and validated for both targets.
-13. Workflows: `done`. Workflow triggers and steps validate; generated dispatch runs after mutating CRUD actions, logs durable local runs, handles email/background/state/approval steps, and webhook steps can POST to env-backed URLs.
-14. Integrations: `done`. Integration declarations validate, inline secrets are rejected, generated registries are emitted, env-backed dispatch exists, and provider helper clients cover webhook/email/CRM/Telegram/WhatsApp/payment/external API.
-15. Multi-target expansion: `done`. `next_shadcn` exists as the second target proof; more targets remain roadmap extensions, and the Rust core now plans generated file topology for both shipped targets.
-16. Visual graph: `done`. `intentstack graph` exports JSON and an HTML graph with pages, sections, entities, actions, workflows, integrations, patch history, component tree and an interactive semantic patch builder.
+26. [done] Create shared registry-based section mapping (remove adapter-specific hardcoding).
+27. [done] Unify backend/frontend codegen by section type map and adapter contracts.
+28. [done] Refactor Next adapter codegen to consume registry metadata for class/style mapping.
+29. [done] Add component registry loader contract tests for all built-in components.
+30. [done] Add generated import deduplication optimization pass.
+31. [done] Add formatting step in build pipeline (`prettier` / `rustfmt` integration).
+32. [done] Auto-run build verification for generated apps (`npm run build`) after emit.
+33. [done] Add generated API contract snapshot generation (OpenAPI + JSON Schema).
+34. [done] Split openapi generation into stable pluggable modules.
+35. [done] Add OpenAPI operation tests for every action and edge-case route.
+36. [done] Add stable deterministic file ordering in output emit.
+37. [done] Add partial emit mode for preview without full regeneration.
+38. [done] Create single source for auth middleware generation in backend.
+39. [done] Add generated frontend route guarding for policy-protected pages.
+40. [done] Generate target capability manifests from registry.
+41. [done] Modularize emitter helpers across all major targets.
+42. [done] Add observability hooks in generated code by section type.
+43. [done] Generate client SDK stubs from actions for demo consumption.
+44. [done] Add adapter coverage matrix tests (web_ts_minimal + next_shadcn).
+45. [done] Add incremental generation cache keyed by intent digest.
 
-## v0.2 Extensions
+## 3) Backend architecture and data layer (46-65)
 
-17. Global navigation/layout: `done`. Top-level `navigation` is validated, exposed in schema/capabilities, editable through semantic patch ops, and generated as one shared nav component across pages for both targets.
-18. Docs/content component: `done`. `content` sections validate structured heading/paragraph/list/code/example blocks, generate docs-style content with optional table of contents, and are available in both target registries.
-19. Multi-target support for shared nav/content: `done`. `web_ts_minimal` and `next_shadcn` both emit shared `AppNav`, docs routes, and generated content sections from the same intent.
-20. Tests/examples/schema for nav/content: `done`. Unit, patch, validation, CLI/schema, golden, registry, and `docs_content` example coverage are present; `verify --npm-build` passes the example matrix.
-21. Visual starter migration: `done`. `playground/visual-starter` now uses shared navigation and a `content` docs page; web and Next generated apps pass typecheck/build.
-22. Modular intent manifest: `done`. Root manifests can declare `includes`, and the loader assembles focused module files into one validated Core IR.
-23. Frontend intent modules: `done`. Page modules can reference section modules by `ref`; examples and tests cover Web and Next generation.
-24. Backend intent modules: `done`. Entity and action modules assemble into generated database schema, API routes, and API clients.
-25. Shared intent modules: `done`. Theme, navigation, and auth can live in `shared/*.yaml`, with owners tracked in loader metadata.
-26. Module patch writeback: `done`. `apply --write` preserves modular projects and writes edits back to owner files instead of flattening the root manifest.
-27. Provenance diagnostics: `done`. Modular diagnostics include source file provenance in text and JSON output.
-28. Split command: `done`. `intentstack split` dry-runs or writes modular files from a monolith intent.
-29. Content authoring improvements: `done`. Content blocks now support links, callouts, and tables; patch ops include `content.blocks.set` and `content.block.move`.
-30. Module graph UI: `done`. `graph --json` and `graph --html` expose module source files and ownership.
-30a. Collaboration conflict detection: `done`. `collab --incoming <ref>` compares local changed owners with an incoming git ref and reports semantic owner conflicts before agents merge edits.
-31. Modular-first default: `done`. `intentstack new` creates modular projects by default, `--single-file` is reserved for legacy monoliths, and `playground/visual-starter` now uses root includes plus shared/frontend modules.
-32. Section module patch op: `done`. `section.module.add` creates a focused section module and inserts a page `ref`, keeping modular pages from accumulating inline sections.
-33. Embedded docs examples: `done`. `example` content blocks can render a live generated section and patch code inside the same docs article block; `embed_only` keeps referenced sections out of standalone page rendering; `content.example.add` inserts these blocks through semantic patches.
-34. OpenAPI generation: `done`. `intentstack openapi` exports OpenAPI 3.1 JSON/YAML from Core IR entities and CRUD record actions, including request/response schemas, item/collection paths, auth cookies, CSRF headers, and CLI tests.
-35. Next adapter modularization: `done`. The `next_shadcn` target now delegates project scaffolding, UI primitives, data layer, API routes, and frontend rendering to focused modules instead of one monolithic adapter file.
-36. Generated test framework: `done`. `intentstack testgen` writes Node `node:test` API contract tests from CRUD record actions, including target-aware base URLs, auth token support, ID-driven item tests, and opt-in mutating tests.
-37. Deploy preparation/execution: `done`. `intentstack deploy --platform vercel|netlify|render` validates intent, can prepare the generated app, writes provider config files, and prints the next provider command without triggering remote login by default; `--execute` runs the command explicitly, with `--command` override for CI/testing.
-38. Observability surface: `done`. Generated Web/Hono and Next apps expose `/api/health` and `/api/metrics`; Web tracks request counts by path and last request duration, Next exposes runtime uptime/counts for the metrics route, and both targets can export request spans to an OTLP/HTTP OpenTelemetry collector when OTEL env vars are set.
-39. Theme marketplace v0: `done`. A local `themes` registry exposes reusable theme packs, `intentstack themes --json` lists them, and `intentstack themes <preset> --write` applies a pack through modular intent writeback.
-40. Visual editor v0: `done`. `intentstack editor --out editor.html` exports the visual graph plus semantic Patch Builder as a dedicated editor entrypoint for non-code intent changes, and served editor mode can reorder page sections by drag/drop through semantic `section.move` patches while showing a live page preview rendered from the current intent.
-41. Plugin/target marketplace v1: `done`. `intentstack marketplace` exposes the local catalog of targets, theme packs, and domain modules in text or JSON; `marketplace install <manifest> --write` installs local target plugin manifests with compatibility checks, version pins, config writeback, and `.intentstack/marketplace-lock.json`.
-42. Realtime subscriptions v1: `done`. Action type `subscribe_records` is validated, exposed in capabilities/schema, represented in Core IR as a stream output, emitted as `/api/<table>/stream` server-sent event endpoints for Web/Hono and Next, documented in OpenAPI, and covered by generated API clients/tests. `web_ts_minimal` additionally emits `/api/<table>/ws` WebSocket endpoints and `subscribe<Entity>Ws()` clients.
-43. PostgreSQL database driver: `done`. `project.database.driver: postgres` emits PostgreSQL Drizzle schema, SQL migrations, migration manifest/checksum metadata, generated clients, package/env/docs metadata, and schema evolution SQL through the shared `db_driver` contract.
+46. [done] Replace in-memory sessions with durable backend store (Redis/Postgres).
+47. [done] Add session expiration + rotation + revocation support.
+48. [done] Production-grade auth hardening (`bcrypt`, JWT/session model, secure cookies).
+49. [done] Add CSRF protection for mutation endpoints.
+50. [done] Enforce HTTPS / secure redirect in generated servers.
+51. [done] Add password policy and optional account lockout in auth flow.
+52. [done] Enforce role/policy validation on every request path.
+53. [done] Remove trust on client-provided role headers (server-only auth context).
+54. [done] Add audit trail for login and policy decisions.
+55. [done] Add configurable rate limiting middleware per route.
+56. [done] Add graceful shutdown handling (SIGTERM/SIGINT) in server entrypoints.
+57. [done] Ensure DB connections close on shutdown + startup health checks.
+58. [done] Extract database adapter layer (`sqlite` hardcode -> pluggable drivers).
+59. [done] Add transaction wrappers for mutation handlers.
+60. [done] Add tenant isolation strategy (schema or RLS-driven).
+61. [done] Replace migration bootstrap with managed migration flow and rollback support.
+62. [done] Add schema drift detection and reporting.
+63. [done] Add configurable CORS policy generation per environment.
+64. [done] Add structured request logging with request IDs.
+65. [done] Add request correlation IDs across action -> DB -> response.
+
+## 4) Frontend and demo app quality (66-85)
+
+66. [done] Add navigation menu in application UI.
+67. [done] Add Documentation page route.
+68. [done] Add table examples section with realistic seed content and sort filters.
+69. [done] Add form examples (text, textarea, enum/select, checkbox, datetime).
+70. [done] Add card and metrics sections with reusable component examples.
+71. [done] Create integrated docs blocks where preview and code are in one section.
+72. [done] Add syntax-highlighted snippet rendering for docs.
+73. [done] Add docs "live patch" flow: edit intent + preview + generated code in one block.
+74. [done] Add responsive visual regression checks for core layouts.
+75. [done] Add accessible navigation patterns and keyboard support.
+76. [done] Add error boundaries for generated section rendering.
+77. [done] Add global error UI with retry/recover actions.
+78. [done] Add user feedback and toast system for actions.
+79. [done] Add loading and empty states for list/table/form actions.
+80. [done] Add filtering, search, and sorting to table examples.
+81. [done] Add pagination for list and table components.
+82. [done] Add table export actions (CSV/JSON) for demo pages.
+83. [done] Add chart component as first non-core UI extension.
+84. [done] Add theme switcher + theme pack switching in demo runtime.
+85. [done] Build consistent iconography and microinteractions for form controls.
+
+## 5) Security, validation, and resilience (86-95)
+
+86. [done] Validate version in pipeline before load.
+87. [done] Normalize all loader include paths against allowlist.
+88. [done] Restrict includes to trusted roots and block path traversal.
+89. [done] Sandbox boundaries for custom component source/build execution.
+90. [done] Add integrity checks for custom component sources (hash + signature).
+91. [done] Add file-size/lint gates to CI pipeline.
+92. [done] Add strict CSP headers in generated frontend/server templates.
+93. [done] Add runtime exception telemetry endpoint and alerts.
+94. [done] Add per-route timeout controls and cancellation behavior.
+95. [done] Add automated dependency vulnerability scans in CI.
+
+## 6) Ecosystem, workflow, and future capabilities (96-100)
+
+96. [done] Add plugin/target marketplace contract and discovery.
+97. [done] Add visual editor MVP for intent graph editing + in-browser patch apply.
+98. [done] Add collaboration workflow (locking and conflict detection).
+99. [done] Add one-click deploy to Vercel/Netlify/Render.
+100. [done] Add AI-assisted intent authoring (autocompletion + patch suggestions).

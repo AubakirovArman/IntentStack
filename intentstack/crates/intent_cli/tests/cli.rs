@@ -152,3 +152,70 @@ pages:
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn rust_cli_runs_core_emit_command() {
+    let dir = env::temp_dir().join(format!("intentstack-core-emit-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).expect("create temp dir");
+    let intent = dir.join("app.intent.yaml");
+    let out_dir = dir.join("generated");
+    fs::write(
+        &intent,
+        r#"
+version: 0.1
+project:
+  id: rust_emit_app
+  target: web_ts_minimal
+entities:
+  - id: Lead
+    fields:
+      - id: name
+        type: string
+actions:
+  - id: create_lead
+    type: create_record
+    entity: Lead
+pages:
+  - id: home
+    path: /
+    sections:
+      - id: hero
+        type: hero
+        title: Rust Emit
+      - id: lead_form
+        type: form
+        entity: Lead
+        fields: [name]
+        submit:
+          action: create_lead
+"#,
+    )
+    .expect("write intent");
+
+    let out = Command::new(env!("CARGO_BIN_EXE_intentstack"))
+        .args([
+            "core",
+            "emit",
+            intent.to_str().expect("utf8 path"),
+            "--json",
+            "--out",
+            out_dir.to_str().expect("utf8 out path"),
+        ])
+        .output()
+        .expect("run intentstack core emit");
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("\"generated\""));
+    assert!(stdout.contains("\"path\": \"src/generated/components/LeadForm.tsx\""));
+    assert!(out_dir.join("package.json").exists());
+    let form = fs::read_to_string(out_dir.join("src/generated/components/LeadForm.tsx"))
+        .expect("read emitted form");
+    assert!(form.contains("export function LeadForm"));
+
+    let _ = fs::remove_dir_all(&dir);
+}

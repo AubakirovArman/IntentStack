@@ -22,9 +22,13 @@ jobs:
           cache-dependency-path: intentstack/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
+      - run: npm run audit:deps
       - run: npm run lint
+      - run: npm run lint:lines:enforce
       - run: npm test
       - run: cargo test
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
 
   generated-builds:
     name: Generated app build (${{ matrix.target }})

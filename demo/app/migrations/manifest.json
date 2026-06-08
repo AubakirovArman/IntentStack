@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "driver": "sqlite",
+  "schema_checksum": "c62de523ccbd57386e4797212bde8d0f954ac1310bbf8937d3516db364b22958",
+  "schema": {
+    "tenancy": {
+      "enabled": false
+    },
+    "entities": [
+      {
+        "id": "Lead",
+        "table": "leads",
+        "fields": [
+          {
+            "id": "id",
+            "column": "id",
+            "type": "integer",
+            "generated": true,
+            "primary_key": true,
+            "required": true
+          },
+          {
+            "id": "name",
+            "column": "name",
+            "type": "string",
+            "required": true,
+            "values": null
+          },
+          {
+            "id": "phone",
+            "column": "phone",
+            "type": "string",
+            "required": true,
+            "values": null
+          },
+          {
+            "id": "company",
+            "column": "company",
+            "type": "string",
+            "required": false,
+            "values": null
+          },
+          {
+            "id": "message",
+            "column": "message",
+            "type": "text",
+            "required": false,
+            "values": null
+          },
+          {
+            "id": "status",
+            "column": "status",
+            "type": "enum",
+            "required": false,
+            "default": "new",
+            "values": [
+              "new",
+              "contacted",
+              "closed"
+            ]
+          },
+          {
+            "id": "createdAt",
+            "column": "created_at",
+            "type": "datetime",
+            "generated": true,
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "id": "0000_init",
+      "file": "0000_init.sql",
+      "checksum": "62caf5bd4f7dc07604c006cd4c729d38dd7930bf3be535a0e7de5817fb51b456"
+    }
+  ]
+}

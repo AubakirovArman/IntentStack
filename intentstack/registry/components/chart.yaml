@@ -1,0 +1,15 @@
+id: chart
+category: data
+props:
+  - id: title
+    type: string
+  - id: items
+    type: array
+  - id: data
+    type: array
+targets: [web_ts_minimal, next_shadcn]
+class_map:
+  web_ts_minimal:
+    section: bg-base-100
+  next_shadcn:
+    section: bg-background

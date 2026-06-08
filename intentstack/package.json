@@ -7,7 +7,10 @@
     "intentstack": "src/index.js"
   },
   "scripts": {
+    "audit:deps": "npm audit --audit-level=high",
     "lint": "node scripts/lint.js",
+    "lint:lines": "node scripts/file-size.js",
+    "lint:lines:enforce": "node scripts/file-size.js --enforce --max-lines 300",
     "test": "node --test"
   },
   "dependencies": {

@@ -2,6 +2,7 @@
 // This representation knows nothing about React, Hono, or Drizzle - only the domain.
 
 import { normalize } from './normalize.js'
+import { buildReferenceGraph } from './reference_graph.js'
 
 export function buildGraph(ast) {
   ast = normalize(ast)
@@ -22,7 +23,9 @@ export function buildGraph(ast) {
     sourceFiles: ast.__intentstack.sourceFiles || [],
     owners: ast.__intentstack.owners || {},
     pathFiles: ast.__intentstack.pathFiles || {},
-  } : { modular: false, includes: [], sourceFiles: [], owners: {}, pathFiles: {} }
+    includeGraph: ast.__intentstack.includeGraph || { nodes: [], edges: [] },
+    includeCycles: ast.__intentstack.includeCycles || [],
+  } : { modular: false, includes: [], sourceFiles: [], owners: {}, pathFiles: {}, includeGraph: { nodes: [], edges: [] }, includeCycles: [] }
 
   const entityById = Object.fromEntries(entities.map((e) => [e.id, e]))
   const actionById = Object.fromEntries(actions.map((a) => [a.id, a]))
@@ -38,7 +41,7 @@ export function buildGraph(ast) {
   const resolved = buildResolved({ actions, pages, workflows, entityById, actionById, integrations })
   const bindings = buildBindings({ actions, pages, workflows })
 
-  return {
+  const graph = {
     version: ast.version,
     project,
     theme,
@@ -66,6 +69,8 @@ export function buildGraph(ast) {
     getField: (entityId, fieldId) => entityById[entityId]?.fields?.find((field) => field.id === fieldId) || null,
     getResolvedSection: (pageId, sectionId) => resolved.sections[sectionRef(pageId, sectionId)] || null,
   }
+  graph.referenceGraph = buildReferenceGraph(graph)
+  return graph
 }
 
 function sectionRef(pageId, sectionId) {

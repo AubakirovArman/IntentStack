@@ -25,6 +25,7 @@ export const COMPONENT_TYPES = [
   'footer',
   'stats',
   'pricing_cards',
+  'chart',
   'content',
   'custom_component',
 ]

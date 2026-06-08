@@ -1,5 +1,5 @@
 import { pascal } from '../../emit/util.js'
-import { schemaImports, schemaBody, migrationSql, migrationManifest, validatorBody, entityClientNeeds } from '../../emit/shared/datamodel.js'
+import { schemaImports, schemaBody, migrationSql, migrationRollbackSql, migrationManifest, validatorBody, entityClientNeeds } from '../../emit/shared/datamodel.js'
 import { dbDriver } from '../../emit/shared/db_driver.js'
 import { hasActionAuth, hasPageAuth, integrationsTs, requestAuthTs, workflowsTs } from '../../emit/shared/modules.js'
 import { otelTs } from '../../emit/shared/observability.js'
@@ -17,11 +17,28 @@ export function dataLayer(graph) {
     pathImports: `import { dirname, join } from 'node:path'`,
     migrationManifestPathExpr: `join(process.cwd(), 'migrations/manifest.json')`,
   })
-  files['lib/db/migrate.ts'] = BANNER + `import { runIntentStackMigrations } from './client'
+  files['lib/db/migration_runtime.ts'] = driver.migrationRuntimeTs(BANNER)
+  files['lib/db/migrate.ts'] = BANNER + `import { checkIntentStackSchemaDrift, rollbackIntentStackMigration, runIntentStackMigrations } from './client'
 
-runIntentStackMigrations()
+async function main() {
+  const args = new Set(process.argv.slice(2))
+  if (args.has('--drift')) {
+    const report = await checkIntentStackSchemaDrift()
+    console.log(JSON.stringify(report, null, 2))
+    if (!report.ok) process.exitCode = 1
+    return
+  }
+  if (args.has('--rollback')) {
+    const result = await rollbackIntentStackMigration()
+    console.log(result.rolled_back ? '[intentstack] rolled back ' + result.id : '[intentstack] no applied migration to roll back')
+    return
+  }
+  await runIntentStackMigrations()
+  console.log('[intentstack] migrations applied')
+}
+
+main()
   .then(() => {
-    console.log('[intentstack] migrations applied')
   })
   .catch((err) => {
     console.error(err)
@@ -29,6 +46,7 @@ runIntentStackMigrations()
   })
 `
   files[driver.migrationFile] = migrationSql(graph)
+  files[driver.migrationFile.replace(/\.sql$/, '.down.sql')] = migrationRollbackSql(graph)
   files[driver.manifestFile] = migrationManifest(graph)
   files['lib/otel.ts'] = otelTs(graph, BANNER)
   for (const e of graph.entities) {

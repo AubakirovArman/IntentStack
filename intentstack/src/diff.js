@@ -67,6 +67,28 @@ export function diffPlannedFiles(planned, outDir, managedZones = []) {
   return { entries, counts, hasChanges: counts.add + counts.change + counts.remove > 0 }
 }
 
+export function diffPlannedFileSets(before, after) {
+  const entries = []
+  const beforeKeys = new Set(Object.keys(before))
+  const afterKeys = new Set(Object.keys(after))
+  for (const rel of Object.keys(after).sort()) {
+    if (!beforeKeys.has(rel)) entries.push({ kind: 'add', path: rel })
+    else if (normalize(before[rel]) !== normalize(after[rel])) {
+      entries.push({ kind: 'change', path: rel, line: firstDifferentLine(before[rel], after[rel]) })
+    } else entries.push({ kind: 'same', path: rel })
+  }
+  for (const rel of Object.keys(before).sort()) {
+    if (!afterKeys.has(rel)) entries.push({ kind: 'remove', path: rel })
+  }
+  const counts = {
+    add: entries.filter((e) => e.kind === 'add').length,
+    change: entries.filter((e) => e.kind === 'change').length,
+    remove: entries.filter((e) => e.kind === 'remove').length,
+    same: entries.filter((e) => e.kind === 'same').length,
+  }
+  return { entries, counts, hasChanges: counts.add + counts.change + counts.remove > 0 }
+}
+
 export function formatDiff(diff, { verbose = false } = {}) {
   const lines = []
   for (const e of diff.entries) {

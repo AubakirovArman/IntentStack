@@ -64,6 +64,16 @@ cd demo/app-next && npm install && npm run dev   # http://localhost:3000
 Submit the demo form, then open the dashboard — the lead travels
 form -> API -> SQLite -> table, with zero hand-written React or backend code.
 
+## Engineering rules
+
+Для всех негенерируемых частей компилятора действует правило: новый и редактируемый исходный модуль
+должен оставаться компактным; если файл >300 строк, его нужно разбивать на модульные файлы.
+
+- Эпический backlog: `intentstack/docs/epics.md`
+- Текущие нарушения лимита: `intentstack/docs/oversized-files.md`
+- Проверка: `cd intentstack && npm run lint:lines`
+- Блокировка в CI: `cd intentstack && npm run lint:lines:enforce`
+
 ## The point
 
 Not that it generates React (many tools do). It's that:
@@ -94,9 +104,9 @@ Next route handlers; shared top-level `navigation`; pages/sections -> `navbar`, 
 table detail/edit/delete row actions; dynamic detail pages; embedded docs examples via `content.example.add` +
 `embed_only` sections; normalize phase for compact field refs; generated Prettier formatting; generated `npm run build`
 verification; JSON Schema; visual graph HTML export; patch history; basic auth guards; durable workflow run log/retry; workflow/integration metadata and provider-specific integration clients;
-webhook dispatch; realtime `subscribe_records` SSE streams plus WebSocket transport for `web_ts_minimal`; optional multi-tenant record isolation; SQLite and PostgreSQL database drivers for schema, migrations, clients, package deps and app docs; visual editor HTML export plus local `editor --serve` patch-apply/writeback server, drag/drop section reorder, and live page preview rendered from current intent; semantic collaboration conflict detection against incoming git refs; context-aware patch suggestions; voice/text-to-patch commands; Rust `intent_core` with YAML/JSON parsing, semantic diagnostics, symbol table, resolved refs, typed graph, bindings, pass summaries, and Rust-native generated file planning; generated health/metrics endpoints; trace context headers, structured request logs, and optional OTLP/HTTP OpenTelemetry span export; generated API contract tests and Playwright E2E flows from pages/forms/tables; deploy config generation plus explicit `--execute` command runner; external plugin target loading; local theme packs and marketplace listing/install with version lockfile; GitHub Actions CI for compiler lint/tests, Rust core/wrapper tests, and generated app build matrix.
+webhook dispatch; realtime `subscribe_records` SSE streams plus WebSocket transport for `web_ts_minimal`; optional multi-tenant record isolation; SQLite and PostgreSQL database drivers for schema, migrations, clients, package deps and app docs; visual editor HTML export plus local `editor --serve` patch-apply/writeback server, drag/drop section reorder, and live page preview rendered from current intent; semantic collaboration conflict detection against incoming git refs; context-aware patch suggestions; voice/text-to-patch commands; Rust `intent_core` with YAML/JSON parsing, semantic diagnostics, symbol table, resolved refs, typed graph, bindings, pass summaries, Rust-native generated file planning, and Rust-native file-content emission/writeback through `core emit`; generated health/metrics endpoints; trace context headers, structured request logs, and optional OTLP/HTTP OpenTelemetry span export; generated API contract tests and Playwright E2E flows from pages/forms/tables; deploy config generation plus explicit `--execute` command runner; external plugin target loading; local theme packs and marketplace listing/install with version lockfile; GitHub Actions CI for compiler lint/tests, Rust core/wrapper tests, and generated app build matrix.
 
-Still partial: full Rust file-content emitter parity.
+Still partial: exact feature parity between the Rust emitter and the richer Node reference target adapters.
 
 ## The agent loop (patches)
 

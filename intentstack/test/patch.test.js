@@ -2,7 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { parseIntentFile } from '../src/parse.js'
-import { applyPatch, patchOps } from '../src/patch.js'
+import {
+  applyPatch,
+  formatPatchConflicts,
+  patchCatalog,
+  patchOps,
+  patchSchema,
+  precheckPatch,
+  semanticPatchDiff,
+} from '../src/patch.js'
 import { validate } from '../src/validate.js'
 
 const demoIntent = fileURLToPath(new URL('../../demo/intent/app.intent.yaml', import.meta.url))
@@ -75,6 +83,12 @@ test('patchOps exposes the PRD command surface implemented by the compiler', () 
   ]) {
     assert.ok(ops.includes(op), `${op} should be implemented`)
   }
+  const catalog = patchCatalog()
+  assert.deepEqual(Object.keys(catalog), ops)
+  assert.equal(catalog['section.module.add'].category, 'section')
+  assert.ok(catalog['content.example.add'].schema.required.includes('code'))
+  const schema = patchSchema()
+  assert.ok(schema.properties.patch.items.oneOf.some((item) => item.properties.op.const === 'content.example.add'))
 })
 
 test('applyPatch is atomic when a later operation fails', () => {
@@ -95,8 +109,8 @@ test('applyPatch is atomic when a later operation fails', () => {
 
   const { changes, errors } = applyPatch(ast, {
     patch: [
-      { op: 'text.set', target: 'page.home.section.hero.id', value: 'renamed_hero' },
       { op: 'text.set', target: 'page.home.section.hero.title', value: 'Should not apply' },
+      { op: 'text.set', target: 'page.home.section.missing.title', value: 'Missing' },
     ],
   })
 
@@ -106,128 +120,88 @@ test('applyPatch is atomic when a later operation fails', () => {
   assert.equal(JSON.stringify(ast), before)
 })
 
-test('new patch operations mutate intent by semantic objects', () => {
+test('patch precheck rejects race-prone id mutations', () => {
   const ast = {
     version: 0.1,
-    project: { id: 'x', target: 'web_ts_minimal' },
-    entities: [],
-    actions: [],
-    pages: [{ id: 'home', path: '/', sections: [] }],
+    project: { id: 'id_race_patch', target: 'web_ts_minimal' },
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Original' }] }],
   }
-  const { errors } = applyPatch(ast, {
-    patch: [
-      { op: 'project.set_theme', radius: 'lg' },
-      { op: 'navigation.set', logo: 'X', items: [{ label: 'Home', href: '/' }] },
-      { op: 'navigation.item.add', item: { label: 'Docs', href: '/docs' } },
-      { op: 'navigation.item.update', label: 'Docs', item: { href: '/documentation' } },
-      { op: 'navigation.item.remove', label: 'Home' },
-      { op: 'entity.create', id: 'Lead', fields: [{ id: 'name', type: 'string' }] },
-      { op: 'entity.field.update', entity: 'Lead', field: 'name', label: 'Full name' },
-      { op: 'action.create', id: 'list_leads', type: 'list_records', entity: 'Lead' },
-      { op: 'navbar.add', page: 'home', id: 'nav', logo: 'X' },
-      { op: 'navbar.item.add', navbar: 'nav', item: { label: 'Home', href: '/' } },
-      { op: 'navbar.item.update', navbar: 'nav', label: 'Home', item: { label: 'Start' } },
-      { op: 'form.add', page: 'home', id: 'lead_form', entity: 'Lead', fields: ['name'], action: 'list_leads' },
-      { op: 'form.bind_submit', form: 'lead_form', action: 'list_leads' },
-      { op: 'table.add', page: 'home', id: 'leads_table', entity: 'Lead', columns: ['name'], action: 'list_leads' },
-      { op: 'table.column.update', table: 'leads_table', column: 'name', value: { label: 'Lead name' } },
-      { op: 'section.add', page: 'home', section: { id: 'docs_content', type: 'content', blocks: [{ id: 'intro', type: 'paragraph', text: 'Hello docs' }] } },
-      { op: 'section.add', page: 'home', section: { id: 'docs_preview', type: 'card_grid', embed_only: true, items: [{ title: 'Preview', text: 'Embedded.' }] } },
-      { op: 'content.block.add', section: 'docs_content', block: { id: 'install', type: 'code', language: 'bash', code: 'npm run build' } },
-      {
-        op: 'content.example.add',
-        section: 'docs_content',
-        id: 'preview_example',
-        title: 'Preview example',
-        text: 'Live preview and patch code in one block.',
-        preview_section: 'docs_preview',
-        code: 'patch:\n  - op: section.module.add',
-        after: 'install',
-      },
-      { op: 'content.block.move', section: 'docs_content', block: 'install', before: 'intro' },
-      { op: 'content.block.update', section: 'docs_content', block: 'intro', value: { text: 'Updated docs' } },
-      { op: 'content.block.remove', section: 'docs_content', block: 'install' },
-      {
-        op: 'content.blocks.set',
-        section: 'docs_content',
-        blocks: [
-          { id: 'intro', type: 'paragraph', text: 'Reset docs' },
-          { id: 'more', type: 'link', text: 'More', href: '/docs' },
-        ],
-      },
-      { op: 'section.move', page: 'home', section: 'leads_table', before: 'lead_form' },
-      { op: 'component.add', section: 'lead_form', component: { id: 'hint', type: 'text', text: 'Hello' } },
-      { op: 'api.route.create', id: 'list_leads_api', method: 'GET', path: '/api/leads', action: 'list_leads' },
-      { op: 'layout.set', page: 'home', value: { width: 'xl' } },
-    ],
-  })
-  assert.deepEqual(errors, [])
-  assert.equal(ast.theme.radius, 'lg')
-  assert.equal(ast.navigation.items[0].label, 'Docs')
-  assert.equal(ast.navigation.items[0].href, '/documentation')
-  assert.equal(ast.entities[0].fields[0].label, 'Full name')
-  assert.equal(ast.pages[0].sections[0].id, 'nav')
-  assert.equal(ast.pages[0].sections[0].items[0].label, 'Start')
-  assert.equal(ast.pages[0].sections[1].id, 'leads_table')
-  assert.equal(ast.pages[0].sections[2].id, 'lead_form')
-  assert.equal(ast.pages[0].sections[2].components[0].id, 'hint')
-  assert.equal(ast.pages[0].sections[3].blocks[0].text, 'Reset docs')
-  assert.equal(ast.pages[0].sections[3].blocks[1].type, 'link')
-  assert.equal(ast.api.routes[0].action, 'list_leads')
-  assert.equal(ast.pages[0].layout_config.width, 'xl')
+  const result = applyPatch(ast, { patch: [{ op: 'text.set', target: 'page.home.section.hero.id', value: 'renamed' }] })
+  assert.match(result.errors[0], /id mutations require a dedicated rename operation/)
+  assert.equal(ast.pages[0].sections[0].id, 'hero')
 })
 
-test('content.example.add creates an embedded docs example block', () => {
+test('patch precheck rejects unsupported target capabilities before mutation', () => {
   const ast = {
-    version: '0.1',
-    project: { id: 'docs_examples', target: 'web_ts_minimal' },
-    pages: [
-      {
-        id: 'docs',
-        path: '/docs',
-        layout: 'docs',
-        sections: [
-          {
-            id: 'docs_content',
-            type: 'content',
-            blocks: [{ id: 'intro', type: 'paragraph', text: 'Intro' }],
-          },
-          {
-            id: 'docs_cards',
-            type: 'card_grid',
-            embed_only: true,
-            items: [{ title: 'Card', text: 'Preview' }],
-          },
-        ],
-      },
-    ],
+    version: 0.1,
+    project: { id: 'capability_patch', target: 'web_ts_minimal' },
+    pages: [{ id: 'home', path: '/', sections: [] }],
   }
+  const patch = { patch: [{ op: 'section.add', page: 'home', section: { id: 'timeline', type: 'timeline' } }] }
+  const errors = precheckPatch(ast, patch.patch)
+  assert.equal(errors.length, 1)
+  assert.match(errors[0], /does not support component "timeline"/)
+  const result = applyPatch(ast, patch)
+  assert.deepEqual(result.errors, errors)
+  assert.deepEqual(result.changes, [])
+  assert.equal(result.ast, ast)
+  assert.equal(result.conflicts[0].fix_hint.kind, 'target_capability')
+  assert.deepEqual(ast.pages[0].sections, [])
+})
 
-  const { errors, changes } = applyPatch(ast, {
-    patch: [
-      {
-        op: 'content.example.add',
-        section: 'docs_content',
-        id: 'cards_example',
-        title: 'Cards',
-        text: 'Preview and code stay together.',
-        preview_section: 'docs_cards',
-        code: 'version: 0.1\npatch: []',
-        after: 'intro',
+test('patch conflicts expose owner location and fix hints', () => {
+  const ast = {
+    version: 0.1,
+    project: { id: 'conflict_patch', target: 'web_ts_minimal' },
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Original' }] }],
+  }
+  Object.defineProperty(ast, '__intentstack', {
+    enumerable: false,
+    value: {
+      rootPath: '/project/intent/app.intent.yaml',
+      owners: {
+        sections: { hero: { file: '/project/intent/frontend/sections/home/hero.section.yaml' } },
       },
-    ],
+    },
   })
+  const result = applyPatch(ast, {
+    patch: [{ op: 'text.set', target: 'section.hero.missing.title', value: 'Nope' }],
+  })
+  assert.equal(result.errors.length, 1)
+  assert.equal(result.conflicts[0].file, '/project/intent/frontend/sections/home/hero.section.yaml')
+  assert.equal(result.conflicts[0].fix_hint.kind, 'missing_reference')
+  assert.match(formatPatchConflicts(result.conflicts), /Conflict explanations:/)
+})
 
-  assert.deepEqual(errors, [])
-  assert.match(changes[0].summary, /add content example cards_example/)
-  assert.deepEqual(ast.pages[0].sections[0].blocks[1], {
-    id: 'cards_example',
-    type: 'example',
-    title: 'Cards',
-    text: 'Preview and code stay together.',
-    section: 'docs_cards',
-    language: 'yaml',
-    code: 'version: 0.1\npatch: []',
-  })
-  assert.equal(validate(ast).hasErrors(), false)
+test('semanticPatchDiff emits minimal semantic operations that replay cleanly', () => {
+  const before = {
+    version: '0.1',
+    project: { id: 'semantic_diff', name: 'Before', target: 'web_ts_minimal' },
+    navigation: { logo: 'Before', items: [{ label: 'Home', href: '/' }] },
+    entities: [{ id: 'Lead', fields: [{ id: 'name', type: 'string' }] }],
+    actions: [],
+    pages: [{ id: 'home', path: '/', sections: [{ id: 'hero', type: 'hero', title: 'Before' }] }],
+  }
+  const after = {
+    ...before,
+    project: { ...before.project, name: 'After' },
+    navigation: { logo: 'After', items: [{ label: 'Home', href: '/' }, { label: 'Docs', href: '/docs' }] },
+    entities: [{ id: 'Lead', fields: [{ id: 'name', type: 'string', label: 'Full name' }] }],
+    pages: [{ id: 'home', path: '/start', sections: [{ id: 'hero', type: 'hero', title: 'After' }] }],
+  }
+  const patch = semanticPatchDiff(before, after)
+  assert.deepEqual(patch.patch.map((op) => op.op), [
+    'project.set_name',
+    'navigation.set',
+    'entity.field.update',
+    'page.update',
+    'section.update',
+  ])
+  const replay = JSON.parse(JSON.stringify(before))
+  assert.deepEqual(applyPatch(replay, patch).errors, [])
+  assert.equal(replay.project.name, 'After')
+  assert.equal(replay.navigation.logo, 'After')
+  assert.equal(replay.entities[0].fields[0].label, 'Full name')
+  assert.equal(replay.pages[0].path, '/start')
+  assert.equal(replay.pages[0].sections[0].title, 'After')
 })

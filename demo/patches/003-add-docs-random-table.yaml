@@ -1,0 +1,18 @@
+version: 0.1
+patch:
+  - op: content.block.add
+    section: docs_content
+    before: overview
+    block:
+      id: random_snapshot_table
+      type: table
+      columns: [Name, Category, Priority, Score, Note]
+      rows:
+        - [Atlas, Workflow, High, 92, Ready for review]
+        - [Nova, Frontend, Medium, 74, Needs copy polish]
+        - [Pulse, Backend, High, 88, API contract checked]
+        - [Echo, Docs, Low, 61, Draft example added]
+        - [Vertex, Database, Medium, 79, Migration path clear]
+        - [Orbit, Testing, High, 95, Build gate passed]
+        - [Quartz, Design, Medium, 83, Layout fits mobile]
+        - [Nimbus, Deploy, Low, 68, Provider config pending]

@@ -1,0 +1,51 @@
+# Example patch: a single agent step that touches text, data model, form, table,
+# layout and navigation. Apply with:
+#   intentstack apply demo/patches/001-add-email-and-pricing.yaml --project demo --write
+version: 0.1
+patch:
+  - op: text.set
+    target: page.home.section.hero.title
+    value: AI voice agents that book your demos
+
+  - op: entity.field.add
+    entity: Lead
+    field:
+      id: email
+      type: string
+      label: Email
+      required: true
+
+  - op: form.field.add
+    form: lead_form
+    field: email
+
+  - op: table.column.add
+    table: leads_table
+    column: email
+
+  - op: section.update
+    id: lead_detail
+    fields: [name, phone, company, message, status, email]
+
+  - op: section.add
+    page: home
+    after: features
+    section:
+      id: pricing
+      type: card_grid
+      title: Simple pricing
+      columns: 3
+      items:
+        - title: Starter
+          text: $19/mo - 100 calls
+        - title: Growth
+          text: $49/mo - 1000 calls
+        - title: Pro
+          text: Custom - unlimited calls
+
+  - op: navbar.item.add
+    page: home
+    navbar: nav
+    item:
+      label: Pricing
+      href: "#pricing"

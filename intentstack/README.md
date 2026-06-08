@@ -36,14 +36,16 @@ node src/index.js verify --examples examples --targets web_ts_minimal,next_shadc
 node src/index.js docs --out docs-site
 cargo run -p intent_cli -- core inspect ../demo/intent/app.intent.yaml --json
 cargo run -p intent_cli -- core plan ../demo/intent/app.intent.yaml --json
+cargo run -p intent_cli -- core emit ../demo/intent/app.intent.yaml --out rust-app
 ```
 
 The Rust workspace includes `crates/intent_core`, which parses YAML/JSON intent into a typed
 Core IR with diagnostics, a symbol table, resolved references, inferred action/section types,
-bindings, pass summaries, and a Rust-native generated file plan for both shipped targets.
+bindings, pass summaries, a Rust-native generated file plan for both shipped targets, and
+Rust-native file-content emission/writeback through `intentstack core emit`.
 `crates/intent_cli` still forwards normal app generation commands to the Node reference emitter,
-while `intentstack core check|inspect|plan|version` exercises the Rust core directly. Full Rust
-file-content emitter parity is intentionally still future work.
+while `intentstack core check|inspect|plan|emit|version` exercises the Rust core directly. Exact
+feature parity with the richer Node reference target adapters remains future hardening.
 
 ## Targets
 
@@ -81,6 +83,22 @@ changes instead of rewriting `0000_init.sql`.
 - `themes` lists local theme packs and can apply one back into modular intent.
 - `marketplace` lists local targets, theme packs, and domain modules available in this compiler build.
 - `marketplace install` installs local target plugin manifests with compatibility checks and a lockfile.
+
+## File Size Policy
+
+Source files in active areas (`src`, `test`, Rust core) should stay under `300` lines.
+When a file approaches the threshold, split by responsibility (frontend/backend/validation/emit/targets)
+before new functionality is merged.
+
+Use:
+
+```bash
+npm run lint:lines
+npm run lint:lines:enforce
+```
+
+`lint:lines` reports current violations.
+`lint:lines:enforce` fails when any tracked source file exceeds `300` lines.
 
 ## Modular Example
 

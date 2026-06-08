@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { createHash, createHmac } from 'node:crypto'
 import { validate } from '../src/validate.js'
 import { buildGraph } from '../src/graph.js'
 import { planFiles } from '../src/emit/index.js'
@@ -85,6 +86,36 @@ export function RoiCalculator() {
     assert.ok(d.errors.some((e) => e.code === 'E2316'))
     assert.ok(d.errors.some((e) => e.code === 'E2317'))
   } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('custom_component verifies declared source integrity', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'intentstack-custom-integrity-'))
+  const previousSecret = process.env.INTENTSTACK_CUSTOM_COMPONENT_SIGNATURE_SECRET
+  try {
+    mkdirSync(join(dir, 'src/custom/components'), { recursive: true })
+    const code = 'export function RoiCalculator() { return null }\n'
+    writeFileSync(join(dir, 'src/custom/components/RoiCalculator.tsx'), code)
+    const hash = createHash('sha256').update(code).digest('hex')
+    const okAst = ast()
+    okAst.pages[0].sections[0].integrity = { sha256: hash }
+    assert.equal(validate(okAst, { outDir: dir }).hasErrors(), false)
+
+    const badHash = ast()
+    badHash.pages[0].sections[0].integrity = { sha256: '0'.repeat(64) }
+    assert.ok(validate(badHash, { outDir: dir }).errors.some((e) => e.code === 'E2318'))
+
+    process.env.INTENTSTACK_CUSTOM_COMPONENT_SIGNATURE_SECRET = 'test-secret'
+    const signed = ast()
+    signed.pages[0].sections[0].integrity = {
+      sha256: hash,
+      signature: createHmac('sha256', 'test-secret').update(code).digest('hex'),
+    }
+    assert.equal(validate(signed, { outDir: dir }).hasErrors(), false)
+  } finally {
+    if (previousSecret == null) delete process.env.INTENTSTACK_CUSTOM_COMPONENT_SIGNATURE_SECRET
+    else process.env.INTENTSTACK_CUSTOM_COMPONENT_SIGNATURE_SECRET = previousSecret
     rmSync(dir, { recursive: true, force: true })
   }
 })
